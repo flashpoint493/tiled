@@ -1,0 +1,18 @@
+name: tile_repeat_3x3
+description: 把一张贴图按 3×3 网格平铺成一张大图（验证循环 / 铺地预览）
+
+steps:
+  - action: load
+    params:
+      path: ${input}
+
+  - action: tile_repeat
+    params:
+      cols: 3
+      rows: 3
+      gap: 0
+      # 想验证"是否真无缝"时把 gap 改成 0；想看清单格边界设 gap: 1 即可。
+
+  - action: save
+    params:
+      path: ${output:auto}

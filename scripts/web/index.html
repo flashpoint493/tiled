@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tiled_tools — Pipeline Studio</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <h1>tiled_tools <span class="muted">Pipeline Studio</span></h1>
+  <div class="actions">
+    <select id="workflow-select" title="加载 workflow">
+      <option value="">— 选择 workflow —</option>
+    </select>
+    <button class="btn" id="save-workflow-btn" title="把当前 pipeline 保存为 workflow">★ 存为 workflow</button>
+    <button class="btn ghost" id="delete-workflow-btn" title="删除当前选中的 workflow">🗑</button>
+
+    <span class="sep"></span>
+
+    <label class="btn">
+      上传图片
+      <input type="file" id="upload-input" accept="image/*" hidden />
+    </label>
+    <button class="btn primary" id="run-btn">▶ 运行</button>
+    <button class="btn" id="export-btn" title="导出为 JSON">💾 导出</button>
+    <label class="btn" title="导入 JSON">
+      📂 导入
+      <input type="file" id="import-input" accept="application/json" hidden />
+    </label>
+    <button class="btn ghost" id="clear-btn">清空</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左侧：action 库 -->
+  <aside class="panel actions-panel">
+    <h2>Actions</h2>
+    <input id="action-search" type="text" placeholder="搜索…" />
+    <ul id="action-list" class="action-list"></ul>
+    <p class="hint">点击或拖到右侧 →</p>
+  </aside>
+
+  <!-- 中间：pipeline -->
+  <section class="panel pipeline-panel">
+    <h2>Pipeline <span class="muted" id="step-count">0 步</span></h2>
+    <ol id="pipeline" class="pipeline-list"></ol>
+    <div id="pipeline-empty" class="empty-tip">
+      左侧选一个 action 加进来开始编排。<br />
+      最简单的 topdown→iso：<code>load → topdown_to_iso → save</code>
+    </div>
+  </section>
+
+  <!-- 右侧：预览 + 日志 -->
+  <aside class="panel preview-panel">
+    <h2>预览</h2>
+    <div class="previews">
+      <div class="preview-box">
+        <h3>原图</h3>
+        <div id="src-preview" class="img-box"><span class="muted">未上传</span></div>
+        <div class="muted" id="src-meta"></div>
+      </div>
+      <div class="preview-box">
+        <h3>产物 <span class="muted" id="out-count"></span></h3>
+        <div id="out-preview" class="img-box"><span class="muted">点击 ▶ 运行</span></div>
+        <div class="muted" id="out-meta"></div>
+      </div>
+    </div>
+    <h3>日志</h3>
+    <pre id="log" class="log"></pre>
+  </aside>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
