@@ -59,3 +59,6 @@ gmon.out
 # Vim files
 *.swp
 *.swo
+
+# CodeBuddy packaging artifacts (内部打包产物，不入库)
+.codebuddy.zip
