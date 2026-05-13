@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/tiled_integration_plugin/assets/css/style.css?v=4b4f433f4271484f2ed2aeeddf444040aa99072c">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Tiled Integration Plugin | Slate is a Jekyll theme for GitHub Pages</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Tiled Integration Plugin" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Slate is a Jekyll theme for GitHub Pages" />
+<meta property="og:description" content="Slate is a Jekyll theme for GitHub Pages" />
+<link rel="canonical" href="https://flekz-games.github.io/tiled_integration_plugin/tiles/utitilemaptileinstance.html" />
+<meta property="og:url" content="https://flekz-games.github.io/tiled_integration_plugin/tiles/utitilemaptileinstance.html" />
+<meta property="og:site_name" content="Tiled Integration Plugin" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Tiled Integration Plugin" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Slate is a Jekyll theme for GitHub Pages","headline":"Tiled Integration Plugin","url":"https://flekz-games.github.io/tiled_integration_plugin/tiles/utitilemaptileinstance.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/tiled_integration_plugin/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <h1 id="project_title">Tiled Integration Plugin</h1>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><a href="../">Home</a> / <a href="/tiled_integration_plugin/tiles/">Tiles</a> / Classes / UTITileMapTileInstance</p>
+
+<h1 id="utitilemaptileinstance">UTITileMapTileInstance</h1>
+
+<h2 id="description">Description</h2>
+<p>This is an instance of a <a href="./utitilemaptile.html">UTITileMapTile</a> stored in a <a href="../tilemaps/utitilemapinstance.html">Tile Map Instance</a> that will get created when you add a <a href="./tilemaps/utitilemap.html">Tile Map</a> to a level and can be modified at runtime (for example, by adding/removing tiles)</p>
+
+<h2 id="extend-class">Extend Class</h2>
+<p>If you want to extend the class either via C++ or Blueprint, you can specify in the <a href="/tiled_integration_plugin/settings/">Plugin Settings</a> what class the plugin should use, instead of the default one. Keep in mind that your class must be a child class from the original one you want to extend.</p>
+
+<p><strong>Note:</strong> Setting a new class override to be used by the plugin won’t be applied to previously imported assets, you will have to delete and import the already existing assets after the settings have been changed.</p>
+
+<h2 id="functions">Functions</h2>
+
+<h3 id="gettilesettile">GetTileSetTile</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="./utitilesettile.html">Tile Set Tile</a> used by this Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileSetTile*:</strong> The <a href="./utitilesettile.html">Tile Set Tile</a> used by this Tile Instance.</li>
+</ul>
+
+<h3 id="getcustomproperties">GetCustomProperties</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> of the Tile Instance, where you can access all the individual properties stored for the Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTICustomProperties*:</strong> The <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> of the Tile Instance.</li>
+</ul>
+
+<h3 id="hascollision">HasCollision</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Checks if the Tile Instance has collision set up on the <a href="./utitilesettile.html">Tile Set Tile</a>.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> True if the Tile Instance has collision.</li>
+</ul>
+
+<h3 id="gettileset">GetTileSet</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="../tilesetes/utitileset.html">Tile Set</a> used by this Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileSet*:</strong> <a href="../tilesetes/utitileset.html">Tile Set</a> used by this Tile Instance.</li>
+</ul>
+
+<h3 id="gettilesetindex">GetTileSetIndex</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the Tile Set Index used by this Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32*:</strong> Tile Set Index used by this Tile Instance.</li>
+</ul>
+
+<h3 id="getgroupid">GetGroupID</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the Group ID specified in the <a href="./utitilesettile.html">Tile Set Tile</a>.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The Group ID.</li>
+</ul>
+
+<h3 id="getgroup">GetGroup</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="./utitilemaptilegroup.html">Group of Tiles</a> specified in the <a href="./utitilesettile.html">Tile Set Tile</a>.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapTileGroup*:</strong> <a href="./utitilemaptilegroup.html">Group of Tiles</a> specified in the <a href="./utitilesettile.html">Tile Set Tile</a>.</li>
+</ul>
+
+<h3 id="gettilemapcomponent">GetTileMapComponent</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="../tilemaps/utitilemapcomponent.html">Tile Map Component</a> used by this Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapComponent*:</strong> <a href="../tilemaps/utitilemapcomponent.html">Tile Map Component</a> used by this Tile Instance.</li>
+</ul>
+
+<h3 id="gettilemapinstance">GetTileMapInstance</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="../tilemaps/utitilemapinstance.html">Tile Map Instance</a> that contains this Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapActor:</strong> <a href="./utitilemapactor.html">Tile Map Actor</a> that contains this Tile Instance.</li>
+</ul>
+
+<h3 id="getlayerinstance">GetLayerInstance</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="../layers/utitilelayerinstance.html">Tile Layer Instance</a> that contains this Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileLayerInstance:</strong> <a href="../layers/utitilelayerinstance.html">Tile Layer Instance</a> that contains this Tile Instance.</li>
+</ul>
+
+<h3 id="getcoordinates">GetCoordinates</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the coordinates of this Tile Instance within the <a href="../tilemaps/utitilemapinstance.html">Tile Map</a>.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>FIntVector:</strong> The coordinates of this Tile Instance.</li>
+</ul>
+
+<h3 id="getopacity">GetOpacity</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the opacity of this Tile Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>float:</strong> The opacity of this Tile Instance.</li>
+</ul>
+
+<h3 id="setopacity">SetOpacity</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the opacity of this Tile Instance.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>InOpacity:</strong> The new opacity for this Tile Instance.</li>
+</ul>
+
+<h3 id="isanimated">IsAnimated</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Checks if the Tile Instance has animation set up on the <a href="./utitilesettile.html">Tile Set Tile</a>.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> True if the Tile Instance has animation.</li>
+</ul>
+
+<h3 id="getflipbook">GetFlipbook</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the Tile Instance animation flipbook.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UPaperFlipbook*:</strong> The animation flipbook or null if not set.</li>
+</ul>
+
+<h3 id="isinviewport">IsInViewport</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Checks if the Tile Instance is currently visible in the viewport.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> True if the Tile Instance is visible in the viewport.</li>
+</ul>
+
+<h3 id="gettileposition">GetTilePosition</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the top left corner position of this Tile Instance.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>bWorldSpace:</strong> If the returned position should be in world space of local space (within the Tile Map)</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>FVector:</strong> The top left corner position of the Tile Instance.</li>
+</ul>
+
+<h3 id="getelevation">GetElevation</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the elevation of the owning <a href="../layers/utitilelayerinstance.html">Tile Layer</a></p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The elevation of the owning <a href="../layers/utitilelayerinstance.html">Tile Layer</a></li>
+</ul>
+
+<h3 id="debugdraw-overrideable">DebugDraw (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Draws debug lines around the Tile Instance.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Duration:</strong> How long the debug draw should last (in seconds)</li>
+  <li><strong>Color:</strong> The color of the debug draw lines.</li>
+</ul>
+
+<h3 id="oninstanced-overrideable">OnInstanced (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Instance has been added to a level.</p>
+
+<h3 id="onmodified-overrideable">OnModified (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Instance has been modified.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Event:</strong> The type of modification (TileAdded, TileRemoved, TileModified).</li>
+  <li><strong>AffectedObject:</strong> The object that has been modified (The class will vary depending on the type of event).</li>
+</ul>
+
+<h3 id="onpostload-overrideable">OnPostLoad (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Instance has been loaded.</p>
+
+<h3 id="ontick-overrideable">OnTick (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Instance ticks.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>DeltaTime:</strong> Time (in seconds) since last tick.</li>
+</ul>
+
+<h3 id="shouldgroupwithtile-overrideable">ShouldGroupWithTile (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when making the <a href="./utitilemaptilegroup.html">Tile Groups</a></p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>GroupTile:</strong> Another Tile Instance that wants to group with this Tile Instance.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> Return true if this Tile Instance should be grouped with the GroupTile.</li>
+</ul>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p class="copyright">Tiled Integration Plugin maintained by <a href="https://github.com/flekz-games">flekz-games</a></p>
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

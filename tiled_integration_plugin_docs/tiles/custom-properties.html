@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/tiled_integration_plugin/assets/css/style.css?v=4b4f433f4271484f2ed2aeeddf444040aa99072c">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Tiled Integration Plugin | Slate is a Jekyll theme for GitHub Pages</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Tiled Integration Plugin" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Slate is a Jekyll theme for GitHub Pages" />
+<meta property="og:description" content="Slate is a Jekyll theme for GitHub Pages" />
+<link rel="canonical" href="https://flekz-games.github.io/tiled_integration_plugin/tiles/custom-properties.html" />
+<meta property="og:url" content="https://flekz-games.github.io/tiled_integration_plugin/tiles/custom-properties.html" />
+<meta property="og:site_name" content="Tiled Integration Plugin" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Tiled Integration Plugin" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Slate is a Jekyll theme for GitHub Pages","headline":"Tiled Integration Plugin","url":"https://flekz-games.github.io/tiled_integration_plugin/tiles/custom-properties.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/tiled_integration_plugin/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <h1 id="project_title">Tiled Integration Plugin</h1>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><a href="../">Home</a> / <a href="/tiled_integration_plugin/tiles/">Tiles</a> / Custom Properties</p>
+
+<h2 id="tile-custom-properties">Tile Custom Properties</h2>
+<p>You can also specify some Unreal Engine properties for the Tiles within a Tile Set from Tiled, which will automatically set it on the imported asset.</p>
+
+<p>Here is the list of custom properties that you can set up on your Tiles:</p>
+
+<ul>
+  <li>
+    <p><strong>Opacity:</strong> (float) Set this to change the Opacity of the Tile (a value between 0 and 1). (Semi transparency will only work on Translucent materials)</p>
+  </li>
+  <li>
+    <p><strong>Group:</strong> (int) Set this to create a <a href="./utitilemaptilegroup.html">Tile Group</a> with all of the tiles with the same group id of this tile set.</p>
+  </li>
+  <li>
+    <p><strong>UserDataName:</strong> (string) Set this to set up the <code class="language-plaintext highlighter-rouge">UserData</code> property that can be used for pairing with Data Tables in Unreal.</p>
+  </li>
+  <li>
+    <p><strong>ActorSpawnerID:</strong> (string) The ID of the Actor to be spawned whenever this tile is used. (See <a href="./tile-actor-spawner.html">Tile Actor Spawner</a> for more info)</p>
+  </li>
+  <li>
+    <p><strong>ActorSpawnerOffsetX:</strong> (float) The offset in the X axis from the center of the tile used for spawning the Actor. (See <a href="./tile-actor-spawner.html">Tile Actor Spawner</a> for more info)</p>
+  </li>
+  <li>
+    <p><strong>ActorSpawnerOffsetY:</strong> (float) The offset in the Y axis from the center of the tile used for spawning the Actor. (See <a href="./tile-actor-spawner.html">Tile Actor Spawner</a> for more info)</p>
+  </li>
+  <li>
+    <p><strong>ActorSpawnerOffsetZ:</strong> (float) The offset in the Z axis from the center of the tile used for spawning the Actor. (See <a href="./tile-actor-spawner.html">Tile Actor Spawner</a> for more info)</p>
+  </li>
+</ul>
+
+<p>A predefined set of Custom Properties is available to download and apply to your Tiled project, which includes all the above properties. You can set it up by following this guide:</p>
+
+<p><strong>1.-</strong> Download the predefined custom properties from <a href="/tiled_integration_plugin/custom-properties/tiled-custom-properties.json">here</a>.</p>
+
+<p><strong>2.-</strong> Open the Custom Types Editor in <code class="language-plaintext highlighter-rouge">View &gt; Custom Types Editor</code>, click on <code class="language-plaintext highlighter-rouge">Import</code> on the top right corner and select the previously downloaded file.</p>
+
+<p><strong>3.-</strong> To apply the properties to your tile, open the Tile Set and select a Tile, in the <code class="language-plaintext highlighter-rouge">Properties</code> window set the class to <code class="language-plaintext highlighter-rouge">Tile</code>. You should see new custom properties show for your tile.</p>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p class="copyright">Tiled Integration Plugin maintained by <a href="https://github.com/flekz-games">flekz-games</a></p>
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/tiled_integration_plugin/assets/css/style.css?v=4b4f433f4271484f2ed2aeeddf444040aa99072c">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Tiled Integration Plugin | Slate is a Jekyll theme for GitHub Pages</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Tiled Integration Plugin" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Slate is a Jekyll theme for GitHub Pages" />
+<meta property="og:description" content="Slate is a Jekyll theme for GitHub Pages" />
+<link rel="canonical" href="https://flekz-games.github.io/tiled_integration_plugin/tilemaps/utitilemap.html" />
+<meta property="og:url" content="https://flekz-games.github.io/tiled_integration_plugin/tilemaps/utitilemap.html" />
+<meta property="og:site_name" content="Tiled Integration Plugin" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Tiled Integration Plugin" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Slate is a Jekyll theme for GitHub Pages","headline":"Tiled Integration Plugin","url":"https://flekz-games.github.io/tiled_integration_plugin/tilemaps/utitilemap.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/tiled_integration_plugin/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <h1 id="project_title">Tiled Integration Plugin</h1>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><a href="../">Home</a> / <a href="/tiled_integration_plugin/tilemaps/">Tile Maps</a> / Classes / UTITileMap</p>
+
+<h1 id="utitilemap">UTITileMap</h1>
+
+<h2 id="description">Description</h2>
+<p>This class represents the actual tile map asset that has been imported from a Tiled Tile Map file and can only be modified from the Tiled Map Editor software and later imported/reimported to Unreal Engine.</p>
+
+<h2 id="extend-class">Extend Class</h2>
+<p>If you want to extend the class either via C++ or Blueprint, you can specify in the <a href="/tiled_integration_plugin/settings/">Plugin Settings</a> what class the plugin should use, instead of the default one. Keep in mind that your class must be a child class from the original one you want to extend.</p>
+
+<p><strong>Note:</strong> Setting a new class override to be used by the plugin won’t be applied to previously imported assets, you will have to delete and import the already existing assets after the settings have been changed.</p>
+
+<h2 id="functions">Functions</h2>
+<h3 id="getcustomproperties">GetCustomProperties</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> of the Tile Map, where you can access all the individual properties stored for the Tile Map.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTICustomProperties*:</strong> The <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> of the Tile Map.</li>
+</ul>
+
+<h3 id="gettile">GetTile</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Tries to get the <a href="../tiles/utitilemaptile.html">Tile Map Tile</a> stored in the specified coordinates.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Z:</strong> The <a href="../layers/utitilelayer.html">Tile Layer</a> index (from highest to lowest).</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapTile*:</strong> The <a href="../tiles/utitilemaptile.html">Tile Map Tile</a> if there is a Tile in that coordinate, or null if it doesn’t contain any Tiles.</li>
+</ul>
+
+<h3 id="getlayer">GetLayer</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Tries to get the <a href="../layers/utitilelayer.html">Tile Layer</a> in the Tile Map.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>LayerIndex:</strong> The layer index (from highest to lowest).</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileLayer*:</strong> The <a href="../layers/utitilelayer.html">Tile Layer</a> or null if not found.</li>
+</ul>
+
+<h3 id="findlayersbyname">FindLayersByName</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Retrieves a list of <a href="../layers/utitilelayer.html">Tile Layers</a> whose names match the one specified. The search is case sensitive.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>LayerName:</strong> The name of the <a href="../layers/utitilelayer.html">Tile Layer</a> to look for (Case sensitive).</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>TArray&lt;UTITileLayer*&gt;:</strong> A list of <a href="../layers/utitilelayer.html">Tile Layers</a> found.</li>
+</ul>
+
+<h3 id="getlayersamount">GetLayersAmount</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the amount of <a href="../layers/utitilelayer.html">Tile Layers</a> in this Tile Map.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The amount of <a href="../layers/utitilelayer.html">Tile Layers</a></li>
+</ul>
+
+<h3 id="gettilewidth">GetTileWidth</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the width (in pixels) of an individual <a href="/tiled_integration_plugin/tiles/">Tile</a>. (All tiles in the Tile Map have the same width)</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The width of an individual <a href="/tiled_integration_plugin/tiles/">Tile</a>.</li>
+</ul>
+
+<h3 id="gettileheight">GetTileHeight</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the height in pixels of an individual <a href="/tiled_integration_plugin/tiles/">Tile</a>. (All tiles in the Tile Map have the same height)</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The height of an individual <a href="/tiled_integration_plugin/tiles/">Tile</a>.</li>
+</ul>
+
+<h3 id="getmapwidth">GetMapWidth</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the amount of <a href="/tiled_integration_plugin/tiles/">Tiles</a> that can fit horizontally in the Tile Map.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The amount of <a href="/tiled_integration_plugin/tiles/">Tiles</a> that can fit horizontally.</li>
+</ul>
+
+<h3 id="getmapheight">GetMapHeight</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the amount of <a href="/tiled_integration_plugin/tiles/">Tiles</a> that can fit vertically in the Tile Map.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The amount of <a href="/tiled_integration_plugin/tiles/">Tiles</a> that can fit vertically.</li>
+</ul>
+
+<h3 id="getprojectionmode">GetProjectionMode</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the projection mode of the Tile Map.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>ETileMapProjectionMode::Type:</strong> The projection mode of the Tile Map (Orthogonal, IsometricDiamond, IsometricStaggered or HexagonalStaggered).</li>
+</ul>
+
+<h3 id="foreachlayer">ForEachLayer</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Calls the given callback once per <a href="../layers/utitilelayer.html">Tile Layer</a></p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Callback:</strong> The function/lambda to be called per <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Reversed:</strong> Set to true to change the order from last to first (lowest to highest). If false the order will be from first to last (highest to lowest).</li>
+</ul>
+
+<h3 id="foreachoccupiedtile">ForEachOccupiedTile</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Calls the given callback once per <a href="../tiles/utitilemaptile.html">Tile Map Tile</a> stored in the Tile Map.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Callback:</strong> The function/lambda to be called per <a href="../tiles/utitilemaptile.html">Tile Map Tile</a>.</li>
+  <li><strong>Reversed:</strong> Set to true to change the order from last to first. If false the order will be from first to last.</li>
+</ul>
+
+<h3 id="foreachtile">ForEachTile</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Calls the given callback once per tile coordinate within the Tile Map. The <a href="../tiles/utitilemaptile.html">Tile Map Tile</a> returned may be null.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Callback:</strong> The function/lambda to be called per tile coordinate.</li>
+  <li><strong>Reversed:</strong> Set to true to change the order from last to first. If false the order will be from first to last.</li>
+</ul>
+
+<h3 id="gettilepositioninlocalspace">GetTilePositionInLocalSpace</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Gets the local position of the given tile coordinates relative to the Tile Map.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Z:</strong> The <a href="../layers/utitilelayer.html">Tile Layer</a> index (from highest to lowest).</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>FVector:</strong> The position of the given tile coordinates in local space.</li>
+</ul>
+
+<h3 id="gettileseparation-overrideable">GetTileSeparation (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Gets how high the given tile is, used for sorting the tile rendering.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Z:</strong> The <a href="../layers/utitilelayer.html">Tile Layer</a> index (from highest to lowest).</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>float:</strong> The height of the given tile.</li>
+</ul>
+
+<h3 id="tilecoordinatestotileindex">TileCoordinatesToTileIndex</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Converts the given tile coordinates to tile index.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Z:</strong> The <a href="../layers/utitilelayer.html">Tile Layer</a> index (from highest to lowest).</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The tile index of the given coordinates.</li>
+</ul>
+
+<h3 id="tileindextotilecoordinates">TileIndexToTileCoordinates</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Converts the given tile index to tile coordinates.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>TileIndex:</strong> The tile index to convert.</li>
+  <li><strong>Layer:</strong> The layer for the given tile index.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>FIntVector:</strong> The tile coordinates of the given tile index.</li>
+</ul>
+
+<h3 id="oncustompropertiesloaded-overrideable">OnCustomPropertiesLoaded (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Map <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> have been loaded.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Properties:</strong> <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> loaded.</li>
+</ul>
+
+<h3 id="onimported-overrideable">OnImported (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Map has been imported by the plugin.</p>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p class="copyright">Tiled Integration Plugin maintained by <a href="https://github.com/flekz-games">flekz-games</a></p>
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

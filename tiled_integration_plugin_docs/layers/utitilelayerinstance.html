@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/tiled_integration_plugin/assets/css/style.css?v=4b4f433f4271484f2ed2aeeddf444040aa99072c">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Tiled Integration Plugin | Slate is a Jekyll theme for GitHub Pages</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Tiled Integration Plugin" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Slate is a Jekyll theme for GitHub Pages" />
+<meta property="og:description" content="Slate is a Jekyll theme for GitHub Pages" />
+<link rel="canonical" href="https://flekz-games.github.io/tiled_integration_plugin/layers/utitilelayerinstance.html" />
+<meta property="og:url" content="https://flekz-games.github.io/tiled_integration_plugin/layers/utitilelayerinstance.html" />
+<meta property="og:site_name" content="Tiled Integration Plugin" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Tiled Integration Plugin" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Slate is a Jekyll theme for GitHub Pages","headline":"Tiled Integration Plugin","url":"https://flekz-games.github.io/tiled_integration_plugin/layers/utitilelayerinstance.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/tiled_integration_plugin/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <h1 id="project_title">Tiled Integration Plugin</h1>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><a href="../">Home</a> / <a href="/tiled_integration_plugin/layers/">Tile Layers</a> / Classes / UTITileLayerInstance</p>
+
+<h1 id="utitilelayerinstance">UTITileLayerInstance</h1>
+
+<h2 id="description">Description</h2>
+<p>This is an instance of a <a href="./utitilelayer.html">UTITileLayer</a> that will get created when you add the asset to a level and can be modified at runtime (for example, by adding/removing tiles)</p>
+
+<h2 id="extend-class">Extend Class</h2>
+<p>If you want to extend the class either via C++ or Blueprint, you can specify in the <a href="/tiled_integration_plugin/settings/">Plugin Settings</a> what class the plugin should use, instead of the default one. Keep in mind that your class must be a child class from the original one you want to extend.</p>
+
+<p><strong>Note:</strong> Setting a new class override to be used by the plugin won’t be applied to previously imported assets, you will have to delete and import the already existing assets after the settings have been changed.</p>
+
+<h2 id="functions">Functions</h2>
+<h3 id="gettile">GetTile</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="../layers/utitilelayer.html">Tile Layer</a> asset for the layer instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileLayer*:</strong> The <a href="../layers/utitilelayer.html">Tile Layer</a> used to initialize this layer instance.</li>
+</ul>
+
+<h3 id="getcustomproperties">GetCustomProperties</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> of the Tile Layer, where you can access all the individual properties stored for the Tile Layer.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTICustomProperties*:</strong> The <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a> of the Tile Layer.</li>
+</ul>
+
+<h3 id="gettileinstance">GetTileInstance</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Tries to get the <a href="../tiles/utitilemaptileinstance.html">Tile Map Tile Instance</a> stored in the specified coordinates.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the Tile Layer.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the Tile Layer.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapTileInstance*:</strong> The <a href="../tiles/utitilemaptileinstance.html">Tile Map Tile Instance</a> if there is a Tile in that coordinate, or null if it doesn’t contain any Tiles.</li>
+</ul>
+
+<h3 id="settileinstance">SetTileInstance</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Sets a <a href="../tiles/utitilemaptileinstance.html">Tile Map Tile Instance</a> in the given coordinates.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the <a href="../layers/utitilelayerinstance.html">Tile Layer Instance</a>.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the <a href="../layers/utitilelayerinstance.html">Tile Layer Instance</a>.</li>
+  <li><strong>TileSet:</strong> The <a href="../tilesets/utitileset.html">Tile Set</a> that will be used for this tile.</li>
+  <li><strong>TileSetIndex:</strong> The Tile Set Tile index that will be set for this tile.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapTileInstance*:</strong> The <a href="../tiles/utitilemaptileinstance.html">Tile Map Tile Instance</a> modified, or null if failed to set.</li>
+</ul>
+
+<h3 id="unsettileinstance">UnsetTileInstance</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Removes a <a href="../tiles/utitilemaptileinstance.html">Tile Map Tile Instance</a> from the given coordinates.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the <a href="../layers/utitilelayerinstance.html">Tile Layer Instance</a>.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the <a href="../layers/utitilelayerinstance.html">Tile Layer Instance</a>.</li>
+</ul>
+
+<h3 id="gettilemapcomponent">GetTileMapComponent</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="../tilemaps/utitilemapcomponent.html">Tile Map Component</a> used by this Tile Layer Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapComponent*:</strong> <a href="../tilemaps/utitilemapcomponent.html">Tile Map Component</a> used by this Tile Layer Instance.</li>
+</ul>
+
+<h3 id="gettilemapinstance">GetTileMapInstance</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="../tilemaps/utitilemapinstance.html">Tile Map Instance</a> that contains this Tile Layer Instance.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileMapActor:</strong> <a href="./utitilemapactor.html">Tile Map Actor</a> that contains this Tile Layer Instance.</li>
+</ul>
+
+<h3 id="getlayername">GetLayerName</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the name of this Tile Layer.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>FString:</strong> The name of the Tile Layer.</li>
+</ul>
+
+<h3 id="getlayerindex">GetLayerIndex</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the Tile Layer index.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The layer index.</li>
+</ul>
+
+<h3 id="iscollisionenabled">IsCollisionEnabled</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Check if the collision is enabled for this Tile Layer (set up from the <a href="/tiled_integration_plugin/custom-properties/">Custom Properties</a>).</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> If the collision is enabled.</li>
+</ul>
+
+<h3 id="ishidden">IsHidden</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Check if the Tile Layer is hidden.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> If the layer is hidden.</li>
+</ul>
+
+<h3 id="getnumoccupiedtiles">GetNumOccupiedTiles</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Gets the amount of Tiles in this Tile Layer.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The amount of Tiles</li>
+</ul>
+
+<h3 id="getelevation">GetElevation</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Gets the Tile Layer elevation (specified on the <a href="./custom-properties.html">Custom Properties</a> or by the layer order)</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The elevation level</li>
+</ul>
+
+<h3 id="foreachtile">ForEachTile</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Calls the given callback once per tile coordinate within the Tile Layer. The <a href="../tiles/utitilemaptile.html">Tile Map Tile</a> returned may be null.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Callback:</strong> The function/lambda to be called per tile coordinate.</li>
+  <li><strong>Reversed:</strong> Set to true to change the order from last to first. If false the order will be from first to last.</li>
+</ul>
+
+<h3 id="foreachoccupiedtile">ForEachOccupiedTile</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Calls the given callback once per <a href="../tiles/utitilemaptile.html">Tile Map Tile</a> stored in the Tile Layer.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Callback:</strong> The function/lambda to be called per <a href="../tiles/utitilemaptile.html">Tile Map Tile</a>.</li>
+  <li><strong>Reversed:</strong> Set to true to change the order from last to first. If false the order will be from first to last.</li>
+</ul>
+
+<h3 id="tilecoordinatestotileindex">TileCoordinatesToTileIndex</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Converts the given tile coordinates to tile index.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>X:</strong> The horizontal coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+  <li><strong>Y:</strong> The vertical coordinate within the <a href="../layers/utitilelayer.html">Tile Layer</a>.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>int32:</strong> The tile index of the given coordinates.</li>
+</ul>
+
+<h3 id="tileindextotilecoordinates">TileIndexToTileCoordinates</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ❌</p>
+
+<p>Converts the given tile index to tile coordinates.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>TileIndex:</strong> The tile index to convert.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>FIntVector:</strong> The tile coordinates of the given tile index.</li>
+</ul>
+
+<h3 id="oninstanced-overrideable">OnInstanced (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Layer Instance has been added to a level.</p>
+
+<h3 id="onmodified-overrideable">OnModified (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Layer Instance has been modified.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>Event:</strong> The type of modification (TileAdded, TileRemoved, TileModified).</li>
+  <li><strong>AffectedObject:</strong> The object that has been modified (The class will vary depending on the type of event).</li>
+</ul>
+
+<h3 id="onpostload-overrideable">OnPostLoad (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Layer Instance has been loaded.</p>
+
+<h3 id="ontick-overrideable">OnTick (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile Layer Instance ticks.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>DeltaTime:</strong> Time (in seconds) since last tick.</li>
+</ul>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p class="copyright">Tiled Integration Plugin maintained by <a href="https://github.com/flekz-games">flekz-games</a></p>
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

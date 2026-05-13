@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/tiled_integration_plugin/assets/css/style.css?v=4b4f433f4271484f2ed2aeeddf444040aa99072c">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Tiled Integration Plugin | Slate is a Jekyll theme for GitHub Pages</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Tiled Integration Plugin" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Slate is a Jekyll theme for GitHub Pages" />
+<meta property="og:description" content="Slate is a Jekyll theme for GitHub Pages" />
+<link rel="canonical" href="https://flekz-games.github.io/tiled_integration_plugin/worlds/atitileworldactor.html" />
+<meta property="og:url" content="https://flekz-games.github.io/tiled_integration_plugin/worlds/atitileworldactor.html" />
+<meta property="og:site_name" content="Tiled Integration Plugin" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Tiled Integration Plugin" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Slate is a Jekyll theme for GitHub Pages","headline":"Tiled Integration Plugin","url":"https://flekz-games.github.io/tiled_integration_plugin/worlds/atitileworldactor.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/tiled_integration_plugin/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <h1 id="project_title">Tiled Integration Plugin</h1>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><a href="../">Home</a> / <a href="/tiled_integration_plugin/worlds/">Tile Worlds</a> / Classes / ATITileWorldActor</p>
+
+<h1 id="atitileworldactor">ATITileWorldActor</h1>
+
+<h2 id="description">Description</h2>
+<p>This is the actor that will be created when instancing a <a href="./utitileworld.html">Tile World</a> asset, which contains a group of <a href="../tilemaps/utitilemapcomponent.html">Tile Map Components</a> that takes care of rendering every <a href="./utitilemapinstance.html">Tile Map Instances</a>.</p>
+
+<h2 id="extend-class">Extend Class</h2>
+<p>If you want to extend the class either via C++ or Blueprint, you can specify in the <a href="/tiled_integration_plugin/settings/">Plugin Settings</a> what class the plugin should use, instead of the default one. Keep in mind that your class must be a child class from the original one you want to extend.</p>
+
+<p><strong>Note:</strong> Setting a new class override to be used by the plugin won’t be applied to previously imported assets, you will have to delete and import the already existing assets after the settings have been changed.</p>
+
+<h2 id="functions">Functions</h2>
+<h3 id="gettileworld">GetTileWorld</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="./utitileworld.html">Tile World</a> asset used by this Tile World Actor.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileWorld:</strong> The <a href="./utitileworld.html">Tile World</a> asset used by this Tile World Actor.</li>
+</ul>
+
+<h3 id="gettileworldinstance">GetTileWorldInstance</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the <a href="./utitileworldinstance.html">Tile World Instance</a> used by this Tile World Actor.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>UTITileWorld:</strong> The <a href="./utitileworldinstance.html">Tile World Instance</a> asset used by this Tile World Actor.</li>
+</ul>
+
+<h3 id="usestileworld">UsesTileWorld</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Checks if the Tile World Instance uses the given <a href="./utitileworld.html">Tile World</a> asset.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>TileWorld:</strong> The <a href="./utitileworld.html">Tile World</a> asset to check.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> True if the Tile World Instance uses the given <a href="./utitileworld.html">Tile World</a> asset.</li>
+</ul>
+
+<h3 id="usestilemap">UsesTileMap</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Checks if the Tile World Instance uses the given <a href="../tilemaps/utitilemap.html">Tile Map</a> asset.</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>TileMap:</strong> <a href="../tilemaps/utitilemap.html">Tile Map</a> asset to check.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>bool:</strong> True if the Tile World Instance uses the given <a href="../tilemaps/utitilemap.html">Tile Map</a> asset.</li>
+</ul>
+
+<h3 id="getclasses">GetClasses</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Gets the classes used to create the Tile World Actor and other dependencies.</p>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>FTITileClasses:</strong> The classes used to create the Tile World Actor and other dependencies.</li>
+</ul>
+
+<h3 id="oninstanced-overrideable">OnInstanced (Overrideable)</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Called when the Tile World Instance has been added to a level.</p>
+
+<h3 id="spawntileworld">SpawnTileWorld</h3>
+
+<p><strong>C++</strong> ✅ <strong>Blueprint</strong> ✅</p>
+
+<p>Spawns a Tile World Actor with the given parameters</p>
+
+<p><strong>Arguments</strong></p>
+<ul>
+  <li><strong>WorldContextObject:</strong> The world context where the Tile Map Actor will spawn to.</li>
+  <li><strong>TileWorld:</strong> The <a href="./utitileworld.html">Tile World</a> to spawn.</li>
+  <li><strong>Position:</strong> The position of the spawned Tile Map Actor.</li>
+  <li><strong>Rotation:</strong> The rotation of the spawned Tile Map Actor.</li>
+  <li><strong>Classes:</strong> The classes to use for creating the Tile World Actor and other dependencies.</li>
+</ul>
+
+<p><strong>Return</strong></p>
+<ul>
+  <li><strong>ATITileWorldActor:</strong> The Tile World Actor spawned.</li>
+</ul>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p class="copyright">Tiled Integration Plugin maintained by <a href="https://github.com/flekz-games">flekz-games</a></p>
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+  </body>
+</html>

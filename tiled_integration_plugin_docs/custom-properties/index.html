@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/tiled_integration_plugin/assets/css/style.css?v=4b4f433f4271484f2ed2aeeddf444040aa99072c">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Tiled Integration Plugin | Slate is a Jekyll theme for GitHub Pages</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Tiled Integration Plugin" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Slate is a Jekyll theme for GitHub Pages" />
+<meta property="og:description" content="Slate is a Jekyll theme for GitHub Pages" />
+<link rel="canonical" href="https://flekz-games.github.io/tiled_integration_plugin/custom-properties/" />
+<meta property="og:url" content="https://flekz-games.github.io/tiled_integration_plugin/custom-properties/" />
+<meta property="og:site_name" content="Tiled Integration Plugin" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Tiled Integration Plugin" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Slate is a Jekyll theme for GitHub Pages","headline":"Tiled Integration Plugin","url":"https://flekz-games.github.io/tiled_integration_plugin/custom-properties/"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/tiled_integration_plugin/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <h1 id="project_title">Tiled Integration Plugin</h1>
+
+          
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><a href="../">Home</a> / Custom Properties</p>
+
+<h2 id="custom-properties">Custom Properties</h2>
+<p>Custom Properties is a feature from the Tiled Map Editor that allows you to store any kind of information on a <a href="/tiled_integration_plugin/tilemaps/">Tile Map</a>, <a href="/tiled_integration_plugin/tilesets/">Tile Set</a>, <a href="../tilelayers/index.md">Tile Layer</a> or <a href="/tiled_integration_plugin/tiles/">Tiles</a> for later use in your project. This plugin allows accessing this information from your Unreal Engine project at any moment either from Blueprints or from C++.</p>
+
+<p>To access the Custom Properties of any of your Tile classes:</p>
+
+<p><strong>1.-</strong> Get a reference to the class placed in your level and use the <code class="language-plaintext highlighter-rouge">GetCustomProperties</code> method</p>
+
+<p><strong>2.-</strong> From the <code class="language-plaintext highlighter-rouge">UTICustomProperties</code> class you will be able to access the Custom Properties by type:</p>
+
+<ul>
+  <li>
+    <p><strong>GetBoolProperty:</strong> Tries to get the value of a boolean property by it’s name, it will return false if the property is not found.</p>
+  </li>
+  <li>
+    <p><strong>GetNumberProperty:</strong> Tries to get the value of a numeric property (int/double/float) by it’s name, it will return false if the property is not found. This will also include enums saved as numbers.</p>
+  </li>
+  <li>
+    <p><strong>GetStringProperty:</strong> Tries to get the value of a string property by it’s name, it will return false if the property is not found.</p>
+  </li>
+  <li>
+    <p><strong>GetFileProperty:</strong> Tries to get the value of a file property (as a string of the file path) by it’s name, it will return false if the property is not found.</p>
+  </li>
+  <li>
+    <p><strong>GetColorProperty:</strong> Tries to get the value of a color property by it’s name, it will return false if the property is not found.</p>
+  </li>
+  <li>
+    <p><strong>GetClassProperty:</strong> Tries to get the value of a class property by it’s name, it will return false if the property is not found. A class can contain a group of more properties.</p>
+  </li>
+</ul>
+
+<h2 id="class-properties">Class Properties</h2>
+<p>When working with custom property classes it can get quite time consuming to get the class and then the property you want from code/blueprint, for that reason a shortcut system has been implement to access the properties under the classes directly.</p>
+
+<p>In order to do that you need to write the property name as the following format <code class="language-plaintext highlighter-rouge">ClassPropertyName.PropertyName</code> where:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">ClassProperty</code> is the name of the class property.</li>
+  <li><code class="language-plaintext highlighter-rouge">PropertyName</code>  is the property name under the class property. You can specify as many <code class="language-plaintext highlighter-rouge">PropertyName</code>s as you want as long as they are sepparated with a dot.</li>
+</ul>
+
+<p>E.g. Let’s assume we have a class called <code class="language-plaintext highlighter-rouge">Point</code> which has two integers under it <code class="language-plaintext highlighter-rouge">X</code> and <code class="language-plaintext highlighter-rouge">Y</code>. In order to directly access <code class="language-plaintext highlighter-rouge">X</code> from the <code class="language-plaintext highlighter-rouge">Point</code> class, we would write the name of the property as <code class="language-plaintext highlighter-rouge">Point.X</code> on the getter method.</p>
+
+<p>E.g.2. Let’s assume we have a class <code class="language-plaintext highlighter-rouge">Shape</code> with the previous class <code class="language-plaintext highlighter-rouge">Point</code> inside. In order to directly access <code class="language-plaintext highlighter-rouge">X</code> from the <code class="language-plaintext highlighter-rouge">Shape</code> class, we would write the name of the property as <code class="language-plaintext highlighter-rouge">Shape.Point.X</code> on the getter method.</p>
+
+<h2 id="unreal-engine-properties">Unreal Engine Properties</h2>
+<p>You can also specify some Unreal Engine properties for Tile Maps, Tile Sets, Tile Layers and Tiles, which will automatically set it on the imported asset:</p>
+
+<ul>
+  <li>
+    <p><a href="../tilemaps/custom-properties.html">Tile Map Properties</a></p>
+  </li>
+  <li>
+    <p><a href="../tilesets/custom-properties.html">Tile Set Properties</a></p>
+  </li>
+  <li>
+    <p><a href="../layers/custom-properties.html">Tile Layer Properties</a></p>
+  </li>
+  <li>
+    <p><a href="../tiles/custom-properties.html">Tile Properties</a></p>
+  </li>
+</ul>
+
+<p>A predefined set of Custom Properties is available to download and apply to your Tiled project, which includes all the above properties. You can set it up by following this guide:</p>
+
+<p><strong>1.-</strong> Download the predefined custom properties from <a href="/tiled_integration_plugin/custom-properties/tiled-custom-properties.json">here</a></p>
+
+<p><strong>2.-</strong> Open the Custom Types Editor in <code class="language-plaintext highlighter-rouge">View &gt; Custom Types Editor</code>, click on <code class="language-plaintext highlighter-rouge">Import</code> on the top right corner and select the previously downloaded file.</p>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p class="copyright">Tiled Integration Plugin maintained by <a href="https://github.com/flekz-games">flekz-games</a></p>
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+  </body>
+</html>
