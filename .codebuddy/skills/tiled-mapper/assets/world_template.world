@@ -1,0 +1,10 @@
+{
+  "type": "world",
+  "onlyShowAdjacentMaps": false,
+  "maps": [
+    { "fileName": "maps/level_0_0.tmj", "x": 0,    "y": 0, "width": 640, "height": 360 },
+    { "fileName": "maps/level_1_0.tmj", "x": 640,  "y": 0, "width": 640, "height": 360 },
+    { "fileName": "maps/level_2_0.tmj", "x": 1280, "y": 0, "width": 640, "height": 360 }
+  ],
+  "patterns": []
+}

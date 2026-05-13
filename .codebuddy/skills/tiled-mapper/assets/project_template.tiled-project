@@ -1,0 +1,70 @@
+{
+  "automappingRulesFile": "",
+  "commands": [],
+  "compatibilityVersion": 1100,
+  "extensionsPath": "extensions",
+  "folders": ["."],
+  "propertyTypes": [
+    {
+      "id": 1,
+      "name": "actor_tag",
+      "type": "enum",
+      "storageType": "string",
+      "values": ["player", "enemy", "item"],
+      "valuesAsFlags": false
+    },
+    {
+      "id": 2,
+      "name": "sound",
+      "type": "class",
+      "color": "#ffaa00",
+      "drawFill": true,
+      "useAs": ["property"],
+      "members": [
+        { "name": "jump",  "type": "file", "value": "" },
+        { "name": "hurt",  "type": "file", "value": "" },
+        { "name": "death", "type": "file", "value": "" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "actor",
+      "type": "class",
+      "color": "#55ff55",
+      "drawFill": true,
+      "useAs": ["object", "tile"],
+      "members": [
+        { "name": "animation", "type": "string", "value": "idle" },
+        { "name": "gravity",   "type": "float",  "value": 980.0 },
+        { "name": "health",    "type": "int",    "value": 100 },
+        { "name": "sound",     "type": "class",  "propertyType": "sound", "value": {} },
+        { "name": "tag",       "type": "string", "propertyType": "actor_tag", "value": "enemy" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "item",
+      "type": "class",
+      "color": "#ffff55",
+      "drawFill": true,
+      "useAs": ["object", "tile"],
+      "members": [
+        { "name": "value",        "type": "int",    "value": 1 },
+        { "name": "pickup_sound", "type": "file",   "value": "" }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "trigger",
+      "type": "class",
+      "color": "#5599ff",
+      "drawFill": false,
+      "useAs": ["object"],
+      "members": [
+        { "name": "target_map", "type": "file",   "value": "" },
+        { "name": "target_x",   "type": "float",  "value": 0.0 },
+        { "name": "target_y",   "type": "float",  "value": 0.0 }
+      ]
+    }
+  ]
+}
