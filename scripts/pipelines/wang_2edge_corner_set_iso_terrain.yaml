@@ -1,0 +1,80 @@
+name: wang_2edge_corner_set_iso_terrain
+description: |
+  同时生成完整 Edge Set + Corner Set 的 Tiled Isometric Terrain tileset。
+
+  输入仍然是两张四方连续贴图（foreground/background）。工具会生成：
+    - 16 张 Edge Set tile（code: N/E/S/W）
+    - 16 张 Corner Set tile（code: TL/TR/BR/BL）
+
+  最终 sheet 是 8×4、共 32 格；每格 96×96，内部 grid 是 96×48 isometric。
+  .tsx 会自动写入两个 wangset：type="edge" 和 type="corner"。
+
+steps:
+  # ---- 同时生成 edge + corner 两套几何蒙版 ----
+  - action: gen_default_masks
+    params:
+      size: ${tile_size:32}
+      half_extent: 0.5
+      mode: both
+
+  # ---- 用两张底图按蒙版混合，得到 32 张 tile ----
+  - action: mask_blend_set
+    params:
+      foreground: ${fg}
+      background: ${bg}
+      resample: ${resample:nearest}
+      expected: 32
+
+  # ---- 每张 tile 转成 iso footprint，再放进 target × target 画布 ----
+  - action: for_each
+    params:
+      source: tiles
+      steps:
+        - action: topdown_to_iso
+          params:
+            anchor: center
+            angle: 45
+            y_scale: 0.5
+            resample: ${resample:bicubic}
+            trim: false
+        - action: scale
+          params:
+            size:
+              - ${target:96}
+              - ${half_target:48}
+            resample: ${resample:bicubic}
+        - action: square_canvas
+          params:
+            size: ${target:96}
+            anchor: ${anchor:center}
+            background: [0, 0, 0, 0]
+
+  # ---- 拼成 8×4 sheet：前 16 格 edge，后 16 格 corner ----
+  - action: pack_sheet
+    params:
+      columns: 8
+      spacing: 0
+      margin: 0
+      path: ${output:auto}
+
+  # ---- 生成带 isometric grid、tileoffset、Edge Set + Corner Set 的 .tsx ----
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:wang_2edge_corner_iso_terrain}
+      tile_names: true
+      grid_orientation: isometric
+      grid_width: ${target:96}
+      grid_height: ${half_target:48}
+      tileoffset_x: ${tileoffset_x:0}
+      tileoffset_y: ${tileoffset_y:24}
+      wang_2edge: true
+      wang_2corner: true
+      edge_offset: 0
+      corner_offset: 16
+      wangset_name: ${edge_wangset_name:edge_set}
+      corner_wangset_name: ${corner_wangset_name:corner_set}
+      background_name: ${background_name:background}
+      foreground_name: ${foreground_name:foreground}
+      wang_transform: iso45_ccw
+

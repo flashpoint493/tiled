@@ -1,0 +1,90 @@
+name: wang_2edge_big_iso
+description: |
+  Wang 2-edge 的“整张 3×3 大图整体 iso 化”版本。
+
+
+  和 wang_2edge_set_iso 不同：
+    - wang_2edge_set_iso：先把 16 张 tile 各自 iso 化，再拼成 4×4，所以视觉上是一格一格的 iso tile。
+    - 本 workflow：先按边匹配规则从 16 张 wang tile 里取样，拼成一张完整 3×3 平面地图，再把整张图做 topdown→iso。
+
+
+
+  适合用作：
+    - 美术预览 / mock-up
+    - 一张完整的大块地形图
+    - Tiled Object Layer 上的一张大装饰图
+
+  注意：最终 iso 大图不是可逐格 terrain brush 的 tileset。要做 Tiled Edge Set 自动地形，仍用 wang_2edge_set 或 wang_2edge_set_iso。
+
+steps:
+  # ---- A. 生成几何蒙版（验证 / 起稿用） ----
+  - action: gen_default_masks
+    params:
+      size: ${tile_size:32}
+      half_extent: 0.5
+
+  # ---- B. 自有蒙版目录（量产）：取消注释，并删掉 A
+  # - action: load_dir
+  #   params:
+  #     path: ${mask_dir}
+  #     pattern: "mask_*.png"
+  #     sort: true
+  #     limit: 16
+
+  # ---- 用两张底图按蒙版混合，得到 16 张 wang tile ----
+  - action: mask_blend_set
+    params:
+      foreground: ${fg}
+      background: ${bg}
+      resample: ${resample:nearest}
+
+  # ---- 按边匹配规则拼成完整 3×3 平面地图：这是“和谐循环”的关键 ----
+  # pattern:
+  #   lake3   = 3×3 反向环（默认；修正“外围 8 格方向反了”的场景）
+  #   island3 = lake3 反相；如果你希望 foreground 在中间、background 在外圈就用它
+
+  #   island4/lake4 = 更大中心区域，但四个外角是纯色
+  #   lookup4 = 0..15 原始查表顺序，仅用于对照，不保证边匹配
+  - action: wang_2edge_compose_map
+    params:
+      pattern: ${pattern:lake3}
+
+      wrap: true
+
+
+  # ---- 先保存平面大图，方便检查边匹配是否正确 ----
+  - action: save
+    params:
+      path: ${flat_output:auto}
+
+  # ---- 把整张 3×3 地图整体转成 iso，而不是逐 tile 转 ----
+
+  - action: topdown_to_iso
+
+    params:
+      anchor: center
+      angle: 45
+      y_scale: 0.5
+      resample: ${resample:bicubic}
+      trim: false
+
+  # ---- 可选：统一到指定大图尺寸。默认 288×144，对应 3×3 每格 96×48 的整体 footprint ----
+  - action: scale
+    params:
+      size:
+        - ${target:288}
+        - ${half_target:144}
+      resample: ${resample:bicubic}
+
+  # ---- 可选：放进 target×target 透明画布，方便在 Tiled 里当一张大图摆放 ----
+  - action: square_canvas
+    params:
+      size: ${target:288}
+
+      anchor: ${anchor:bottom-center}
+      background: [0, 0, 0, 0]
+
+  # ---- 保存最终完整 iso 大图 ----
+  - action: save
+    params:
+      path: ${output:auto}

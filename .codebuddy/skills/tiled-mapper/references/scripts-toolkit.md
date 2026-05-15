@@ -35,7 +35,11 @@ python -m tiled_tools serve --port 8765
 - 中：当前 pipeline（拖拽排序）
 - 右：原图 / 产物预览 + 日志
 
-顶栏 workflow 下拉里有 5 个内置 workflow（见下文表格），开箱即用。
+顶栏 workflow 下拉里有 12 个内置 workflow（见下文表格），开箱即用；顶栏「批量导入」可一次选择多张图片并自动生成 sheet + `.tsx`。
+
+
+
+
 
 ### 2. CLI 跑 YAML pipeline
 
@@ -63,17 +67,33 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 | `3x3_split_then_iso` | 3x3 循环 tile → 切 9 张 → 每张 iso → 散文件 | 9 PNG |
 | `3x3_split_then_iso_sheet` | 同上 + 拼 sprite sheet + 生成 Tiled `.tsx` | 1 PNG + 1 TSX |
 | `tile_repeat_3x3` | 单张贴图按 3×3 平铺成大图（验证循环 / 铺地预览） | 1 PNG |
+| `batch_images_to_tilesheet` | 多张独立图片 / 一个目录 → 拼成单张 tilesheet + `.tsx`（Web 顶栏「批量导入」会自动走这条链路） | 1 PNG + 1 TSX |
+| `wang_2edge_set` | 两张底图（foreground/background）→ 16 张过渡 tile + sheet + .tsx（沙↔水 等 edge-style 过渡素材） | 1 PNG + 1 TSX |
+
+| `wang_2edge_set_iso` | 同 `wang_2edge_set`，但每张过渡 tile 被单独 iso 45° 化，最终是 96×96 画布的视觉 tileset sheet | 1 PNG + 1 TSX |
+| `wang_2edge_set_iso_terrain` | 同 `wang_2edge_set`，但每张 tile 放在 96×96 tileset 单元中，同时在 `.tsx` 写入 96×48 isometric grid + tileoffset，适合 Tiled Isometric Terrain Brush 框选/标记 | 1 PNG + 1 TSX |
+| `wang_2edge_corner_set_iso_terrain` | 同时生成完整 Edge Set + Corner Set：前 16 格 edge，后 16 格 corner，并在 `.tsx` 自动写两个 wangset | 1 PNG + 1 TSX |
+
+| `wang_2edge_big_iso` | 按边匹配矩阵拼完整 3×3 平面地图，再把整张图整体 iso 45° 化（默认 `lake3`，反转外围 8 格方向，四角都是拐角过渡 tile；不是 0..15 lookup sheet） | 平面图 + 1 PNG |
+
+
+
+
+
+
 
 **最常用是第三个**——一条命令把 auto-tile 素材完全做成 Tiled 可打开的形态。
 
-## Action 速查（13 个）
+## Action 速查（18 个）
+
 
 | Action | 输入 | 输出 | 主要参数 |
 | --- | --- | --- | --- |
 | `load` | 磁盘 path / web 上传 file_id | `ctx.image` | `path` |
 | `save` | `ctx.image` | 磁盘文件 | `path`（`auto` = 自动分配） |
 | `save_all` | `ctx.extras["tiles"]` 多张图 | 一组文件 | `dir`, `prefix`, `pattern` |
-| `square_canvas` | `ctx.image` | 正方形画布 | `anchor`, `size`, `background` |
+| `square_canvas` | `ctx.image` | 指定画布（默认正方形，也可矩形） | `anchor`, `size`, `width`, `height`, `background` |
+
 | `rotate` | `ctx.image` | 旋转后的图 | `angle`, `expand`, `resample` |
 | `scale` | `ctx.image` | 缩放后的图 | `sx`, `sy`, `factor`, `size` |
 | `topdown_to_iso` | `ctx.image` | iso 化的图 | `anchor`, `angle=45`, `y_scale=0.5`, `trim` |
@@ -83,6 +103,15 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 | `pack_sheet` | `ctx.extras["tiles"]` | sprite sheet PNG + sheet 元数据 | `columns`, `spacing`, `margin`, `tile_w`, `tile_h`, `pad_anchor` |
 | `build_tsx_sheet` | `ctx.extras["sheet"]` | Tiled `.tsx` | `name`, `tile_names`（是否写 NW/N/... 命名属性） |
 | `tile_repeat` | `ctx.image` | 平铺后的大图 | `cols=3`, `rows=3`, `count`（覆盖 cols/rows）, `gap`, `background`（单图 N×M 复制：验证循环 / 铺地预览） |
+| `make_seamless` | `ctx.image` | 四方连续贴图 | `method`, `overlap`, `blur_radius`, `blur_band`（把任意图片变 tileable） |
+
+| `load_dir` | 目录 | `ctx.extras["tiles"]` + `tile_names` | `path`, `pattern="*.png"`, `sort`, `limit`（批量读美术蒙版用） |
+| `gen_default_masks` | — | 16 张蒙版（`tiles`） | `size=32`, `half_extent=0.5`（生成 wang 2-edge 几何蒙版） |
+| `mask_blend_set` | `ctx.extras["tiles"]`（16 蒙版）+ 两张底图 | 16 张过渡 tile | `foreground`, `background`, `resample`, `expected=16` |
+| `wang_2edge_compose_map` | `ctx.extras["tiles"]`（16 张 wang tile） | 边匹配 3×3 / 4×4 预览地图 | `pattern=lake3`, `code_matrix`, `wrap` |
+
+
+
 
 ### Context 通道（设计核心）
 
@@ -146,6 +175,85 @@ steps:
 注意：这是**机械复制**，每格图都一样。如果用户实际上有一组 3×3 auto-tile
 （9 张不同方位 tile），他要的可能是"按邻居关系挑边角拼"，那是另一个还没
 实现的能力（roadmap 里的 `tile_repeat_autotile`），需要先和用户澄清。
+
+### 配方 A4：Wang 2-edge 过渡素材（沙↔水等）
+
+用户说"我有一张四方连续沙地，想加沙→水过渡"——这是经典 wang 2-edge
+（Edge Set 的标准制作方式，行业里叫 RPG Maker A2 / 2-edge wang tile）。
+
+**边码约定**：4-bit `N E S W`（bit 1=北, 2=东, 4=南, 8=西），bit=1 代表
+foreground terrain（默认 sand）。0..15 共 16 张 tile，排成 4×4 sheet。
+
+```yaml
+steps:
+  # 方案 A（最快）：用几何蒙版
+  - action: gen_default_masks
+    params: { size: ${tile_size:32}, half_extent: 0.5 }  # 自动生成边带 + 拐角圆角过渡
+
+  # 方案 B（量产）：换成自己画的蒙版目录
+  # - action: load_dir
+  #   params: { path: ${mask_dir}, pattern: "mask_*.png", limit: 16 }
+
+  - action: mask_blend_set
+    params:
+      foreground: ${fg}     # sand_tile.png
+      background: ${bg}     # water_tile.png
+      resample: nearest     # 像素美术必须
+  - action: pack_sheet
+    params: { columns: 4, spacing: 0, margin: 0, path: auto }
+  - action: build_tsx_sheet
+    params: { name: ${name:wang_sand_water}, tile_names: true }
+```
+
+**Tiled 这边**：把产物 `.tsx` 拖进 Tiled 后，Terrain Sets 面板里会已有自动生成的 **Edge Set**（写在 `<wangsets>` 里）。通常只需要改 terrain 名称 / 颜色并开始刷，不需要在透明 padding 很多的 sheet 上手工逐 tile 标边。
+
+
+### 配方 A5：Wang 2-edge 过渡素材 + iso 45° 视角（标准化到 96×96 画布）
+
+和 A4 输入完全一致，但每张过渡 tile 被 iso 化成菱形并放在 96×96 正方形画布
+正中（菱形宽 96 高 48，上下各 24px 透明边）—— Tiled isometric 模式标准形态。
+
+```yaml
+steps:
+  - { action: gen_default_masks, params: { size: ${tile_size:32}, half_extent: 0.5 } }
+  - { action: mask_blend_set, params: { foreground: ${fg}, background: ${bg}, resample: nearest } }
+  - action: for_each
+    params:
+      source: tiles
+      steps:
+        - action: topdown_to_iso
+          params:
+            anchor: center
+            angle: 45
+            y_scale: 0.5         # 2:1 dimetric；60° 真等距用 0.5774
+            resample: bicubic
+            trim: false          # 关键：保证 16 张产出形状一致
+        - action: scale          # 标准化菱形尺寸到 target × target/2
+          params:
+            size: [${target:96}, ${half_target:48}]
+            resample: bicubic
+        - action: square_canvas  # 上方补透明边到 target × target 画布
+          params:
+            size: ${target:96}
+            # 默认 bottom-center：菱形贴底，上方留 (target - half_target) 透明
+            # 像素给立绘 / 高物体；想居中改成 center
+            anchor: ${anchor:bottom-center}
+            background: [0, 0, 0, 0]
+  - { action: pack_sheet, params: { columns: 4, path: auto } }
+  - { action: build_tsx_sheet, params: { name: ${name:wang_2edge_iso}, tile_names: true } }
+```
+
+**默认尺寸**：target=96 → 每张 tile 96×96 画布，4×4 sheet = 384×384。
+要改成 128×128 或 64×64：CLI 传 `-v target=128 -v half_target=64`，或
+直接编辑 yaml 里的 `${target:96}` 默认值。
+
+**注意 1**：上面 YAML 例子的 `size: [...]` flow style 在某些 YAML 里跟
+`${...}` 占位会冲突，工作 workflow 文件用 block style（每个元素一行 `-`）
+更稳。
+
+**注意 2**：默认 tsx orientation 是普通方块。要用作真正的 Tiled isometric
+地图 tileset：Edit Tileset → Orientation 改为 Isometric，Tile Width=96，
+Tile Height=48（菱形外接，不是画布高）。
 
 ### 配方 B：3x3 循环 tile → 9 张散文件
 
@@ -283,4 +391,5 @@ class MyAction(Action):
 
 - 工具链产物 tsx 是 XML，不是 JSON（与教程推荐的 `.tsj` 不一致）。若需要 JSON：用 Tiled 打开 tsx → `File → Save As...` → 选 JSON 格式。
 - `for_each` 暂不支持嵌套（显式拒绝）。批量处理需要嵌套时考虑写一个新复合 action。
-- 没有"目录批处理"模式（拿一个文件夹批量跑同一 workflow）。要批处理多源文件，用 PowerShell / bash 循环 CLI。
+- Web 顶栏「批量导入」只负责把多张独立图片组成一个 tilesheet；还不是“对一个目录里的每张源图分别跑同一 workflow”的通用目录批处理。
+

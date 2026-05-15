@@ -1,0 +1,38 @@
+name: make_seamless
+description: |
+  把任意图片变成四方连续（tileable）+ 自动 3x3 平铺验证。
+  右下产物面板会同时显示「无缝化后的单张」和「3x3 平铺验证图」，
+  肉眼看接缝处有无可见竖/横/十字裂缝即可判断质量。
+
+  method 选择建议：
+    - feather（默认）   纹理类素材：沙、草、岩石、布料、水面、雪
+    - mirror            细节非常杂乱、要求 0 接缝（注意会有对称感）
+    - offset_blur       低频接缝（不均匀渐变背景类）
+
+steps:
+  - action: load
+    params:
+      path: ${input}
+
+  - action: make_seamless
+    params:
+      method: ${method:feather}
+      overlap: 0.25            # feather 用
+      blur_radius: 8           # offset_blur 用
+      blur_band: 0.15          # offset_blur 用
+
+  # 先把"无缝化的单张"保存
+  - action: save
+    params:
+      path: ${output:auto}
+
+  # 再做 3x3 平铺验证：这一步会把 ctx.image 替换成大图，
+  # 但上面 save 已经存好单张了，所以两个产物都有。
+  - action: tile_repeat
+    params:
+      count: 3
+      gap: 0
+
+  - action: save
+    params:
+      path: auto

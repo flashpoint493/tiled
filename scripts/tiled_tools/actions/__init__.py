@@ -17,3 +17,9 @@ from . import for_each       # noqa: F401
 from . import pack_sheet     # noqa: F401
 from . import build_tsx_sheet  # noqa: F401
 from . import tile_repeat    # noqa: F401
+from . import gen_default_masks  # noqa: F401
+from . import load_dir      # noqa: F401
+from . import mask_blend_set  # noqa: F401
+from . import make_seamless  # noqa: F401
+from . import wang_2edge_compose_map  # noqa: F401
+

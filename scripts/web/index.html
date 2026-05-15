@@ -22,15 +22,40 @@
       上传图片
       <input type="file" id="upload-input" accept="image/*" hidden />
     </label>
+    <label class="btn" title="批量导入多张图片并自动组成 tilesheet">
+      批量导入
+      <input type="file" id="batch-upload-input" accept="image/*" multiple hidden />
+    </label>
     <button class="btn primary" id="run-btn">▶ 运行</button>
+
     <button class="btn" id="export-btn" title="导出为 JSON">💾 导出</button>
     <label class="btn" title="导入 JSON">
       📂 导入
       <input type="file" id="import-input" accept="application/json" hidden />
     </label>
     <button class="btn ghost" id="clear-btn">清空</button>
+    <button class="btn ghost" id="help-btn" title="打开帮助教程 (?)">📖 帮助</button>
   </div>
 </header>
+
+<!-- 帮助弹层：左侧文档列表，右侧渲染后的 markdown -->
+<div id="help-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>📖 帮助 &amp; 教程</h2>
+      <button class="modal-close" data-close title="关闭 (Esc)">✕</button>
+    </div>
+    <div class="modal-body">
+      <nav class="doc-nav">
+        <ul id="doc-list"><li class="muted">加载中…</li></ul>
+      </nav>
+      <article id="doc-content" class="doc-content">
+        <p class="muted">从左侧选一篇教程开始阅读。</p>
+      </article>
+    </div>
+  </div>
+</div>
 
 <main class="layout">
   <!-- 左侧：action 库 -->

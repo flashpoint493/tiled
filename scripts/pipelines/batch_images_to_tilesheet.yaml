@@ -1,0 +1,27 @@
+name: batch_images_to_tilesheet
+description: |
+  批量导入一组图片，并把它们按文件名顺序组成一张 Tiled tilesheet PNG，
+  同时生成一份 .tsx。Web 端可直接点“批量导入”选择多张图运行。
+
+steps:
+  - action: load_dir
+    params:
+      path: ${input_dir}
+      pattern: "*"
+      sort: true
+      limit: 0
+
+  - action: pack_sheet
+    params:
+      columns: ${columns:}
+
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      pad_anchor: ${pad_anchor:center}
+      path: ${output:auto}
+
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:batch_tilesheet}
+      tile_names: true

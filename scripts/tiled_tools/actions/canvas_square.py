@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
-"""square_canvas: 把图像扩成正方形画布。
+"""square_canvas: 把图像放进指定画布（兼容旧的正方形用法）。
 
 为什么要有这一步？
 - topdown 贴图常见情况是宽高不等（例如 64x32 的菱形 footprint，或者 96x80
   的角色立绘）。直接旋转 45° 会让贴图被裁掉一角。
-- 先把短边补齐到长边，所有像素都不会丢失，再旋转就稳了。
+- 旋转前常用默认正方形画布（max(w,h)）；但很多批量素材 / footprint / UI 图块
+  本身需要矩形画布，比如 96x48 的 iso footprint，所以这里也支持 width/height
+  或 size=[w,h]。
 
 参数：
-- size       : 目标正方形边长。默认 None = 取 max(w, h)。
+- size       : int 表示正方形边长；[w,h] / "w,h" / "wxh" 表示矩形画布。
+               默认 None = 取 max(w, h) 的正方形（保持历史行为）。
+- width/height: 可显式指定矩形画布宽高；会覆盖 size 对应维度。
 - anchor     : 原图在新画布里的锚点。可选：
                  "center"（默认）、"top-left"、"bottom-center"、"top-center"、
                  "bottom-left"...
@@ -16,9 +20,11 @@
 - background : 填充色（R,G,B,A）。默认透明 (0,0,0,0)。
 """
 
+
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
+
 
 from PIL import Image
 
@@ -60,33 +66,81 @@ def _anchor_offset(
     return x, y
 
 
+def _parse_size(size: Any, default: Tuple[int, int]) -> Tuple[int, int]:
+    """解析画布尺寸。int=正方形；list/tuple/"w,h"/"wxh"=矩形。"""
+    if size is None or size == "":
+        return default
+    if isinstance(size, (int, float)):
+        side = max(1, int(size))
+        return side, side
+    if isinstance(size, (list, tuple)):
+        if len(size) == 1:
+            side = max(1, int(size[0]))
+            return side, side
+        if len(size) >= 2:
+            return max(1, int(size[0])), max(1, int(size[1]))
+    if isinstance(size, str):
+        s = size.lower().replace("×", "x").replace(",", "x")
+        parts = [p.strip() for p in s.split("x") if p.strip()]
+        if len(parts) == 1:
+            side = max(1, int(float(parts[0])))
+            return side, side
+        if len(parts) >= 2:
+            return max(1, int(float(parts[0]))), max(1, int(float(parts[1])))
+    raise TypeError(f"[square_canvas] 无法解析 size: {size!r}")
+
+
 @register("square_canvas")
 class SquareCanvasAction(Action):
-    description = "把图像扩成正方形画布（旋转前预处理）"
+    description = "把图像放进指定画布（默认正方形；也支持矩形 width/height 或 size=[w,h]）"
     param_hints = {
         "anchor": {"enum": sorted(_ANCHORS)},
         "background": {"widget": "rgba"},
+        "width": {"min": 1, "step": 1},
+        "height": {"min": 1, "step": 1},
     }
 
     def run(
         self,
         ctx: Context,
-        size: Optional[int] = None,
+        size: Optional[Any] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
         anchor: str = "center",
         background: Tuple[int, int, int, int] = (0, 0, 0, 0),
     ) -> Context:
         img = self.require_image(ctx, "square_canvas")
         w, h = img.size
-        side = size if size else max(w, h)
+        cw, ch = _parse_size(size, default=(max(w, h), max(w, h)))
+        if width:
+            cw = max(1, int(width))
+        if height:
+            ch = max(1, int(height))
 
-        if w == side and h == side:
-            print(f"[square_canvas] 已是 {side}x{side}，跳过")
+        if w == cw and h == ch:
+            print(f"[square_canvas] 已是 {cw}x{ch}，跳过")
             return ctx
 
         bg = self.normalize_color(background, channels=4)
-        canvas = Image.new("RGBA", (side, side), bg)
-        ox, oy = _anchor_offset((side, side), (w, h), anchor)
-        canvas.alpha_composite(img, dest=(ox, oy))
-        ctx.meta["square_size"] = side
-        print(f"[square_canvas] {w}x{h} -> {side}x{side}  anchor={anchor}")
+        canvas = Image.new("RGBA", (cw, ch), bg)
+        ox, oy = _anchor_offset((cw, ch), (w, h), anchor)
+
+        # 如果目标画布比原图小，按 anchor 进行裁切；比直接 alpha_composite 更稳。
+        src_x = max(0, -ox)
+        src_y = max(0, -oy)
+        dst_x = max(0, ox)
+        dst_y = max(0, oy)
+        paste_w = min(w - src_x, cw - dst_x)
+        paste_h = min(h - src_y, ch - dst_y)
+        if paste_w > 0 and paste_h > 0:
+            cropped = img.crop((src_x, src_y, src_x + paste_w, src_y + paste_h))
+            if cropped.mode != "RGBA":
+                cropped = cropped.convert("RGBA")
+            canvas.alpha_composite(cropped, dest=(dst_x, dst_y))
+
+        ctx.meta["canvas_size"] = (cw, ch)
+        if cw == ch:
+            ctx.meta["square_size"] = cw  # 兼容旧 meta
+        print(f"[square_canvas] {w}x{h} -> {cw}x{ch}  anchor={anchor}")
         return ctx.with_image(canvas)
+

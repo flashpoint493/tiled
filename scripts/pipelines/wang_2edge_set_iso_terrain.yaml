@@ -1,0 +1,92 @@
+name: wang_2edge_set_iso_terrain
+description: |
+  Wang 2-edge tile set 的 Tiled Isometric Terrain Brush 版本。
+
+  和 wang_2edge_set_iso 的区别：
+    - wang_2edge_set_iso：每张 tile 放进 96×96 透明画布，适合视觉预览 / 物件垫底。
+    - 本 workflow：每张 tile 也放进 96×96 透明画布，方便在 Tileset 编辑器里
+      框选/标记；但 .tsx 会写入 <grid orientation="isometric" width="96" height="48"/>
+      和 <tileoffset x="0" y="24"/>，让地图使用 96×48 的 isometric grid。
+
+
+  适合用作真正的 Tiled isometric map terrain brush：
+    - Map: Orientation = Isometric, Tile Width = 96, Tile Height = 48
+    - Tileset cell = 96×96, Grid = Isometric 96×48, tileoffset.y = 24
+
+    - Terrain Set: Edge Set（按 Tiled 逻辑 Top/Right/Bottom/Left 标边）
+
+steps:
+  # ---- A. 生成几何蒙版（验证 / 起稿用） ----
+  - action: gen_default_masks
+    params:
+      size: ${tile_size:32}
+      half_extent: 0.5
+
+  # ---- B. 自有蒙版目录（量产）：取消注释，并删掉 A
+  # - action: load_dir
+  #   params:
+  #     path: ${mask_dir}
+  #     pattern: "mask_*.png"
+  #     sort: true
+  #     limit: 16
+
+  # ---- 用两张底图按蒙版混合，得到 16 张 wang tile ----
+  - action: mask_blend_set
+    params:
+      foreground: ${fg}
+      background: ${bg}
+      resample: ${resample:nearest}
+
+  # ---- 每张 tile 转成 iso footprint，再放进 target × target 画布，方便 tileset 编辑器框选/标记 ----
+
+  - action: for_each
+    params:
+      source: tiles
+      steps:
+        - action: topdown_to_iso
+          params:
+            anchor: center
+            angle: 45
+            y_scale: 0.5
+            resample: ${resample:bicubic}
+            trim: false
+        - action: scale
+          params:
+            size:
+              - ${target:96}
+              - ${half_target:48}
+            resample: ${resample:bicubic}
+        - action: square_canvas
+          params:
+            size: ${target:96}
+            anchor: ${anchor:center}
+            background: [0, 0, 0, 0]
+
+  # ---- 拼 4×4 terrain tilesheet：每格 96×96，但 grid 是 96×48 ----
+
+  - action: pack_sheet
+    params:
+      columns: 4
+      spacing: 0
+      margin: 0
+      path: ${output:auto}
+
+  # ---- 生成带 isometric grid 元数据的 Tiled .tsx ----
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:wang_2edge_iso_terrain}
+      tile_names: true
+      grid_orientation: isometric
+      grid_width: ${target:96}
+      grid_height: ${half_target:48}
+      tileoffset_x: ${tileoffset_x:0}
+      tileoffset_y: ${tileoffset_y:24}
+      wang_2edge: true
+      wangset_name: ${wangset_name:wang_2edge_iso_terrain}
+      background_name: ${background_name:background}
+      foreground_name: ${foreground_name:foreground}
+      wang_transform: iso45_ccw
+
+
+

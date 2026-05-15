@@ -41,11 +41,54 @@ from .registry import get_action
 _VAR_PATTERN = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::-?([^}]*))?\}")
 
 
+def _coerce_default(s: str) -> Any:
+    """把 YAML/CLI 里 ${var:default} 中的 default 字符串智能转为合适类型。
+
+    YAML 里写的 ${target:96} 默认值文本是字符串 "96"，但 action 期望的可能
+    是 int/float/bool。这里做一次"尽量能转就转"的解析，行为对照 YAML 标量
+    自动类型推断的子集（比 ast.literal_eval 更宽容）：
+
+      "96"     -> 96
+      "0.5"    -> 0.5
+      "true"   -> True
+      ""       -> ""        (保留空字符串语义，比如 ${prefix:})
+      "auto"   -> "auto"    (无法解析的字符串原样保留)
+
+    若用户在 CLI 用 `-v target=96` 传入，那已经是字符串，会被送入这里同样
+    转换 —— 行为统一。
+    """
+    if s == "":
+        return ""
+    low = s.lower()
+    if low in ("true", "yes"):
+        return True
+    if low in ("false", "no"):
+        return False
+    if low in ("null", "none", "~"):
+        return None
+    # int
+    try:
+        return int(s)
+    except ValueError:
+        pass
+    # float
+    try:
+        return float(s)
+    except ValueError:
+        pass
+    return s
+
+
 def _resolve_var(name: str, default: Optional[str], variables: Dict[str, Any]) -> Any:
     if name in variables:
-        return variables[name]
+        v = variables[name]
+        # CLI 用 `-v target=96` 传进来时也是字符串，统一转一下；
+        # 非字符串（数字 / bool / list / dict 等）原样返回。
+        if isinstance(v, str):
+            return _coerce_default(v)
+        return v
     if default is not None:
-        return default
+        return _coerce_default(default)
     raise KeyError(
         f"pipeline 引用了未提供的变量: {name}。"
         f"在 CLI 用 -v {name}=... 传入，或者在 YAML 里写 ${{{name}:默认值}}。"

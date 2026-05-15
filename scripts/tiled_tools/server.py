@@ -9,7 +9,9 @@
 路由：
     GET  /api/actions              列出所有 action 及其参数 schema
     POST /api/upload               上传图片，返回 {file_id, filename, url}
+    POST /api/upload-batch         批量上传图片到一个运行期目录，返回 {dir_id, files}
     POST /api/run                  body: {pipeline: [...], variables: {...}}
+
                                    执行 pipeline，返回 {ok, log, outputs}
     GET  /api/file/{file_id}       下载/预览（uploads 与 outputs 都走这里）
     GET  /                         前端 SPA
@@ -35,7 +37,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .core.action import Context
-from .core.pipeline import Pipeline, _substitute as _pipeline_substitute
+from .core.pipeline import (
+    Pipeline,
+    _substitute as _pipeline_substitute,
+    _coerce_default as _coerce_str,
+)
 from .core.registry import available_actions, get_action
 
 # 注册表里的 Action 类
@@ -56,6 +62,8 @@ OUTPUT_DIR = RUNTIME_DIR / "outputs"
 WORKFLOWS_DIR = SCRIPTS_ROOT / "workflows"
 # 仓库自带的 YAML pipeline（手写、只读）
 PIPELINES_DIR = SCRIPTS_ROOT / "pipelines"
+# 教程 markdown，前端「📖 帮助」按钮渲染
+DOCS_DIR = SCRIPTS_ROOT / "docs"
 
 
 def _ensure_dirs() -> None:
@@ -90,6 +98,8 @@ def _resolve_file_id(file_id: str) -> Path:
       "up_xxx.png"                  -> uploads 下
       "out_xxx.png"                 -> outputs 下
       "set_xxxx/grass_NW.png"       -> outputs 下的子目录（save_all 产物）
+      "batch_xxxx/001_tile.png"     -> uploads 下的批量上传子目录
+
 
     防穿越：必须落在 RUNTIME_DIR 下，且不允许 ".." 段。
     """
@@ -157,11 +167,12 @@ def create_app() -> FastAPI:
     @app.post("/api/upload")
     async def upload(file: UploadFile = File(...)):
         # 推断后缀，默认 .png
-        suffix = Path(file.filename or "").suffix.lower() or ".png"
-        if suffix not in (".png", ".webp", ".jpg", ".jpeg", ".bmp", ".tga"):
-            raise HTTPException(400, f"不支持的图片格式: {suffix}")
+        suffix = _check_image_suffix(file.filename)
         file_id = _new_id("up", suffix)
         dest = UPLOAD_DIR / file_id
+        # 防御：进程跑着时如果有人删了 .web_runtime/，下次上传会 FileNotFoundError。
+        # 这里再保险一次，开销可忽略。
+        dest.parent.mkdir(parents=True, exist_ok=True)
         data = await file.read()
         dest.write_bytes(data)
         return {
@@ -171,7 +182,40 @@ def create_app() -> FastAPI:
             "size_bytes": len(data),
         }
 
+    @app.post("/api/upload-batch")
+    async def upload_batch(files: List[UploadFile] = File(...)):
+        """批量上传图片到 uploads/batch_xxxx/，供 load_dir + pack_sheet 使用。"""
+        if not files:
+            raise HTTPException(400, "没有上传文件")
+        dir_id = f"batch_{uuid.uuid4().hex[:8]}"
+        dest_dir = UPLOAD_DIR / dir_id
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        items = []
+        for i, file in enumerate(files, start=1):
+            suffix = _check_image_suffix(file.filename)
+            original = Path(file.filename or f"image_{i:03d}{suffix}").name
+            stem = _safe_upload_stem(Path(original).stem, fallback=f"image_{i:03d}")
+            fname = f"{i:03d}_{stem}{suffix}"
+            dest = dest_dir / fname
+            data = await file.read()
+            dest.write_bytes(data)
+            fid = f"{dir_id}/{fname}"
+            items.append({
+                "file_id": fid,
+                "filename": original,
+                "url": f"/api/file/{fid}",
+                "size_bytes": len(data),
+            })
+
+        return {
+            "dir_id": dir_id,
+            "count": len(items),
+            "files": items,
+        }
+
     @app.get("/api/file/{file_id:path}")
+
     def get_file(file_id: str):
         p = _resolve_file_id(file_id)
         return FileResponse(p)
@@ -188,13 +232,18 @@ def create_app() -> FastAPI:
         - 字符串里的 ${var:default} 占位符在预处理前先解析一遍，让上面这些
           "auto / 文件路径" 的判断能稳定工作。
         """
+        # 进程运行期间用户可能手动删了 .web_runtime/，每次跑都重新确保目录在
+        _ensure_dirs()
+
         # 0) 先做一遍变量替换：把 ${output:auto} 这类提前展开成 "auto"，
         #    否则下面 raw == "auto" 判断不到。
         try:
             steps_substituted = [
                 {
                     "action": s.action,
-                    "params": _pipeline_substitute(dict(s.params), req.variables or {}),
+                    "params": _coerce_params(
+                        _pipeline_substitute(dict(s.params), req.variables or {})
+                    ),
                 }
                 for s in req.pipeline
             ]
@@ -221,6 +270,18 @@ def create_app() -> FastAPI:
 
             if action_name == "load":
                 params["path"] = _materialize_input_path(params.get("path"))
+
+            elif action_name == "load_dir":
+                # path 参数允许指向 uploads / outputs 下的运行期子目录（如 batch_xxxx / set_xxxx），
+                # 也允许绝对路径直接放行。
+                params["path"] = _materialize_dir_path(params.get("path"))
+
+            elif action_name == "mask_blend_set":
+
+                # foreground / background 也是输入路径，做 file_id 解析。
+                for k in ("foreground", "background"):
+                    if k in params and params[k]:
+                        params[k] = _materialize_input_path(params[k])
 
             elif action_name == "save":
                 raw = params.get("path")
@@ -348,24 +409,63 @@ def create_app() -> FastAPI:
 
     # workflow 持久化路由
     _register_workflow_routes(app)
+    _register_docs_routes(app)
 
     if WEB_DIR.is_dir():
-        # 把 /static/* 映射到 web/ ，再让 / 返回 index.html
-        app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+        # /static/* 映射到 web/。这里手写一个轻量路由而不用 StaticFiles，
+        # 是为了能给所有静态资源加 Cache-Control: no-cache —— 否则前端
+        # 改完代码用户必须 Ctrl+F5 才能看到，是个真实踩过的坑。
+        from fastapi.responses import FileResponse, Response
+
+        _STATIC_NO_CACHE = {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        }
+
+        @app.get("/static/{rel:path}")
+        def serve_static(rel: str):
+            if ".." in rel.split("/"):
+                raise HTTPException(400, "非法路径")
+            p = (WEB_DIR / rel).resolve()
+            try:
+                p.relative_to(WEB_DIR.resolve())
+            except ValueError:
+                raise HTTPException(400, "非法路径")
+            if not p.is_file():
+                raise HTTPException(404, f"找不到: {rel}")
+            return FileResponse(p, headers=_STATIC_NO_CACHE)
 
         @app.get("/", response_class=HTMLResponse)
         def index():
             idx = WEB_DIR / "index.html"
             if not idx.is_file():
                 return HTMLResponse("<h1>web/index.html 不存在</h1>", status_code=500)
-            return HTMLResponse(idx.read_text(encoding="utf-8"))
+            return HTMLResponse(idx.read_text(encoding="utf-8"),
+                                headers=_STATIC_NO_CACHE)
 
     return app
 
 
 # ---------- 路径工具 ----------
 
+_IMAGE_SUFFIXES = (".png", ".webp", ".jpg", ".jpeg", ".bmp", ".tga")
+
+
+def _check_image_suffix(filename: Optional[str]) -> str:
+    suffix = Path(filename or "").suffix.lower() or ".png"
+    if suffix not in _IMAGE_SUFFIXES:
+        raise HTTPException(400, f"不支持的图片格式: {suffix}")
+    return suffix
+
+
+def _safe_upload_stem(stem: str, fallback: str = "image") -> str:
+    safe = _re.sub(r"[^a-zA-Z0-9_.-]+", "_", stem).strip("._-")
+    return safe[:80] or fallback
+
+
 def _materialize_input_path(raw: Any) -> str:
+
     """load.path 解析：file_id → uploads 路径；其他视为磁盘路径。"""
     if raw is None:
         raise HTTPException(400, "load 缺少 path")
@@ -383,6 +483,29 @@ def _materialize_input_path(raw: Any) -> str:
     return str(p)
 
 
+def _materialize_dir_path(raw: Any) -> str:
+    """目录参数解析：batch_xxxx / set_xxxx → 运行期目录；绝对路径原样使用。"""
+    if raw is None:
+        raise HTTPException(400, "load_dir 缺少 path")
+    s = str(raw)
+    p = Path(s).expanduser()
+    if p.is_absolute():
+        return str(p)
+    if "\\" in s or ".." in s.split("/"):
+        raise HTTPException(400, "非法目录 id")
+
+    for base in (UPLOAD_DIR, OUTPUT_DIR):
+        cand = (base / s).resolve()
+        try:
+            cand.relative_to(RUNTIME_DIR.resolve())
+        except ValueError:
+            continue
+        if cand.is_dir():
+            return str(cand)
+    # 找不到运行期目录时，按普通相对路径交给 action 自己报错（CLI / 本地调试友好）
+    return str(p)
+
+
 def _materialize_output_path(raw: Any) -> Path:
     """save.path 解析：相对路径写到 OUTPUT_DIR，绝对路径原样使用。"""
     s = str(raw)
@@ -391,6 +514,40 @@ def _materialize_output_path(raw: Any) -> Path:
         return p
     # 纯文件名/相对路径都落到 OUTPUT_DIR，避免污染工作区
     return OUTPUT_DIR / p.name
+
+
+# ---------- 参数智能类型转换 ----------
+
+# 前端 resolvePlaceholders 把 ${target:96} 展开成字符串 "96" 后提交，
+# 服务端要在送进 action 前转回 int，否则 PIL/numpy 会 TypeError。
+# 后端的 _coerce_default 只在 _resolve_var 里跑，对"前端已展开后的字面量
+# 字符串"覆盖不到，所以这里再做一道兜底。
+#
+# 跳过的字段名：那些**明确就是字符串语义**的字段（即便用户填 "123"
+# 也是想要文件名"123"），不能误转成 int。
+_STRING_SEMANTIC_KEYS = {
+    "path", "dir", "pattern", "name", "source", "anchor", "mode",
+    "resample", "method", "format", "prefix",
+    "foreground", "background",  # mask_blend_set 的输入路径
+    "action",                    # for_each 嵌套 step 的 action 名
+}
+
+
+def _coerce_value(v: Any, key: Optional[str] = None) -> Any:
+    """对 value 递归做"字符串数字 → int/float"转换。"""
+    if isinstance(v, dict):
+        return {k: _coerce_value(vv, k) for k, vv in v.items()}
+    if isinstance(v, list):
+        return [_coerce_value(x, key) for x in v]
+    if isinstance(v, str):
+        if key in _STRING_SEMANTIC_KEYS:
+            return v
+        return _coerce_str(v)
+    return v
+
+
+def _coerce_params(params: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: _coerce_value(vv, k) for k, vv in params.items()}
 
 
 # ---------- workflow 路由 ----------
@@ -493,6 +650,60 @@ def _register_workflow_routes(app: FastAPI) -> None:
             raise HTTPException(404, "找不到 workflow")
         p.unlink()
         return {"ok": True, "id": wid}
+
+
+# ---------- 教程 markdown 路由 ----------
+
+# 教程 id 只允许字母数字下划线（与 _check_workflow_id 区分开，不收 `-`，
+# 因为我们的教程文件用下划线命名约定：01_quick_start.md）
+_VALID_DOC_ID = _re.compile(r"^[a-zA-Z0-9_]{1,64}$")
+
+
+def _doc_title(content: str, fallback: str) -> str:
+    """从 markdown 第一行 `# Title` 提取标题；没有就用 fallback。"""
+    for line in content.splitlines():
+        line = line.strip()
+        if line.startswith("# "):
+            return line[2:].strip()
+        if line:  # 第一行不是标题就停，避免误读
+            break
+    return fallback
+
+
+def _register_docs_routes(app: FastAPI) -> None:
+
+    @app.get("/api/docs")
+    def list_docs():
+        items: List[Dict[str, Any]] = []
+        if DOCS_DIR.is_dir():
+            for p in sorted(DOCS_DIR.glob("*.md")):
+                try:
+                    content = p.read_text(encoding="utf-8")
+                except Exception as e:
+                    print(f"[docs] 跳过 {p.name}: {e}")
+                    continue
+                title = _doc_title(content, p.stem)
+                items.append({
+                    "id": p.stem,
+                    "title": title,
+                    "filename": p.name,
+                })
+        return {"docs": items}
+
+    @app.get("/api/docs/{doc_id}")
+    def get_doc(doc_id: str):
+        if not _VALID_DOC_ID.match(doc_id):
+            raise HTTPException(400, f"非法 doc id: {doc_id!r}")
+        p = DOCS_DIR / f"{doc_id}.md"
+        if not p.is_file():
+            raise HTTPException(404, f"找不到教程: {doc_id}")
+        content = p.read_text(encoding="utf-8")
+        return {
+            "id": doc_id,
+            "title": _doc_title(content, doc_id),
+            "filename": p.name,
+            "content": content,   # raw markdown，前端自己渲染
+        }
 
 
 def main(host: str = "127.0.0.1", port: int = 8765, reload: bool = False) -> None:

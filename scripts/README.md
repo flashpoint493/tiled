@@ -53,7 +53,8 @@ pip install -r requirements.txt
 | `load` | 从磁盘读图到 ctx.image |
 | `save` | 把 ctx.image 写到磁盘（单图） |
 | `save_all` | 批量保存上一步的多张产物（消费 `ctx.extras["tiles"]`） |
-| `square_canvas` | 把图扩成正方形（旋转前预处理） |
+| `square_canvas` | 把图放进指定画布：默认正方形，也支持 `size=[w,h]` / `width` / `height` 矩形画布 |
+
 | `rotate` | 任意角度旋转，可选 expand |
 | `scale` | 缩放，支持非等比 |
 | `topdown_to_iso` | 复合：square_canvas + rotate(45) + scale(sy=0.5) + 可选 trim |
@@ -63,6 +64,12 @@ pip install -r requirements.txt
 | `pack_sheet` | 把 `ctx.extras["tiles"]` 拼成单张 sprite sheet PNG（Tiled 友好） |
 | `build_tsx_sheet` | 基于 pack_sheet 的 sheet 生成 Tiled `.tsx`（Based on Tileset Image） |
 | `tile_repeat` | 把单张贴图按 N×M 网格平铺成一张大图（验证循环 / 铺地预览） |
+| `load_dir` | 从目录批量读图到 `ctx.extras["tiles"]`（读美术蒙版用） |
+| `gen_default_masks` | 生成 16 张 wang 2-edge 几何蒙版（过渡素材起稿） |
+| `mask_blend_set` | 用 16 张蒙版混合两张底图 → 16 张 wang 2-edge tile |
+| `wang_2edge_compose_map` | 按边匹配 code 矩阵把 16 张 wang tile 拼成完整预览地图 |
+| `make_seamless` | 把任意图片变成四方连续（tileable） |
+
 
 查看实时列表：
 
@@ -92,10 +99,13 @@ python -m tiled_tools serve --port 8765
 
 操作：
 1. 点「上传图片」选一张本地贴图（自动填到 `load.path`）。
-2. 选一个内置 workflow 起步，或自己拼。常用模板：
+2. 如果是多张独立 PNG 要组成 tilesheet，点「批量导入」一次选择多张图，Web 会自动拼成 sheet + `.tsx` 并运行。
+3. 选一个内置 workflow 起步，或自己拼。常用模板：
    - `topdown_to_iso`：单图直接 iso 化。
    - `3x3_split_then_iso`：3×3 循环 tile → 拆 9 张 → 每张 iso → 批量保存。
-3. 点「▶ 运行」或按 `Ctrl+Enter`。产物在右下，可下载。
+   - `batch_images_to_tilesheet`：目录/批量图片 → sheet + `.tsx`。
+4. 点「▶ 运行」或按 `Ctrl+Enter`。产物在右下，可下载。
+
 
 ### 合成 sprite sheet + Tiled tsx
 
@@ -137,8 +147,10 @@ load → split_3x3 → for_each(steps=[topdown_to_iso]) → save_all
 | 路由 | 说明 |
 | --- | --- |
 | `GET /api/actions` | 列出所有 action 的 schema |
-| `POST /api/upload` | multipart 上传图片，返回 `file_id` |
+| `POST /api/upload` | multipart 上传单张图片，返回 `file_id` |
+| `POST /api/upload-batch` | multipart 批量上传图片，返回 `dir_id` 与文件列表，供 `load_dir` 使用 |
 | `POST /api/run` | body `{pipeline:[...], variables:{...}}`，跑完返回 `outputs` 与日志 |
+
 | `GET /api/file/<id>` | 预览/下载 uploads 或 outputs 里的文件 |
 | `GET /api/workflows` | 列出所有 workflow（user + builtin yaml） |
 | `GET /api/workflows/<id>` | 取一个 workflow（builtin 用 `yaml:<stem>` 形式） |
@@ -241,6 +253,44 @@ python -m tiled_tools run pipelines/tile_repeat_3x3.yaml \
 - `background`：留 gap 时透出的底色，默认透明
 
 Web 端下拉里直接选 `tile_repeat_3x3` 即可，上传一张图后改改参数就行。
+
+### 1.7) Wang 2-edge 过渡素材（沙↔水 等）
+
+你有一张四方连续的沙地，想加入沙→水过渡怎么办？这就是经典的
+"wang 2-edge tile" 需求（也叫 RPG Maker 的 A2 格式）。
+
+完整 16 张 tile 的边码约定（4-bit N E S W）、蒙版画法、和
+Tiled Edge Set 绑定步骤详见 web 端 **📖 帮助 → Wang 2-edge 专题**。
+最简形态：
+
+```bash
+python -m tiled_tools run pipelines/wang_2edge_set.yaml \
+    -v fg=sand_tile.png \
+    -v bg=water_tile.png \
+    -v name=wang_sand_water
+```
+
+产物：一张 4×4 sheet PNG + 一份 Tiled `.tsx`，**用几何蒙版自动生成**
+（16 张蒙版由 `gen_default_masks` 出，包含边带和拐角圆角过渡）。`.tsx` 会自动写入 Edge Set 的 `<wangsets>` 元数据，所以不用在透明 padding 很多的 sheet 上手工逐格标边；之后用
+`load_dir` 换成美术蒙版即可量产。
+
+
+
+需要 iso 45° 视角的版本？有两种：
+
+- `wang_2edge_set_iso`：每张过渡 tile 单独 iso 化，再拼 4×4 iso sheet；每格是 96×96 透明画布，适合视觉 tileset / 物件垫底。
+- `wang_2edge_set_iso_terrain`：每格是 96×96 tileset 单元（方便框选/标记），但 `.tsx` 写入 96×48 isometric grid + tileoffset，适合真正在 Tiled Isometric Map 里用 Terrain Brush。
+- `wang_2edge_corner_set_iso_terrain`：生成 32 格 sheet，前 16 格是完整 Edge Set，后 16 格是完整 Corner Set，并在 `.tsx` 自动写入两个地形集。
+
+- `wang_2edge_big_iso`：按边匹配矩阵先拼一张完整 3×3 平面地图，再把整张图整体 iso 化，适合美术预览 / mock-up / 一张大装饰图。默认 `lake3` 会反转外围 8 格方向，四角都是拐角过渡 tile，不是简单的 0..15 lookup sheet。
+
+
+
+
+
+
+完整说明见 web 端 **📖 帮助 → Wang 2-edge 专题**。
+
 
 ### 2) 在 Python 里直接编排
 

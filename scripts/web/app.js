@@ -14,7 +14,9 @@ const state = {
   actions: [],
   actionMap: {},
   uploaded: null,
+  batchUploaded: null,
   steps: [],
+
   workflows: [],
   currentWid: "",
   _uid: 0,
@@ -25,21 +27,32 @@ const newId = () => `s${++state._uid}`;
 // ---------------- 启动 ----------------
 
 async function init() {
-  const res = await fetch("/api/actions");
-  const data = await res.json();
-  state.actions = data.actions;
-  state.actionMap = Object.fromEntries(state.actions.map(a => [a.name, a]));
-  renderActionLibrary();
-  await refreshWorkflows();
-
-  // 初始 demo
-  if (state.actionMap.load && state.actionMap.topdown_to_iso && state.actionMap.save) {
-    addStep("load");
-    addStep("topdown_to_iso");
-    addStep("save");
-  }
-
+  // 先绑定 UI 事件——即便后端没起来 / 网络错误，按钮也不至于完全失灵
+  // （比如「📖 帮助」按钮就是纯前端可用的）。
   bindGlobalEvents();
+
+  try {
+    const res = await fetch("/api/actions");
+    if (!res.ok) throw new Error(`/api/actions 返回 ${res.status}`);
+    const data = await res.json();
+    state.actions = data.actions;
+    state.actionMap = Object.fromEntries(state.actions.map(a => [a.name, a]));
+    renderActionLibrary();
+    await refreshWorkflows();
+
+    // 初始 demo
+    if (state.actionMap.load && state.actionMap.topdown_to_iso && state.actionMap.save) {
+      addStep("load");
+      addStep("topdown_to_iso");
+      addStep("save");
+    }
+  } catch (e) {
+    console.error("[init] 加载失败:", e);
+    const list = document.getElementById("action-list");
+    if (list) list.innerHTML =
+      `<li class="muted">加载 actions 失败：${escapeHtml(String(e))}<br/>` +
+      `请确认 server 已启动（python -m tiled_tools serve）</li>`;
+  }
 }
 
 // ---------------- 左侧 action 库 ----------------
@@ -234,6 +247,60 @@ function renderField(step, field) {
     }
   }
 
+  // filepath widget 字段：在右侧加 📎 上传按钮，点它直接上传并填入 file_id
+  // 这解决了"workflow 有多个输入图（如 mask_blend_set.foreground/background）
+  // 时顶栏上传按钮只能填一个 load.path"的问题。
+  if (field.widget === "filepath") {
+    const row = document.createElement("div");
+    row.className = "filepath-row";
+    row.appendChild(input);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn ghost filepath-upload";
+    btn.title = "上传图片填入此字段";
+    btn.textContent = "📎";
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.hidden = true;
+
+    btn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", async () => {
+      const f = fileInput.files?.[0];
+      fileInput.value = "";
+      if (!f) return;
+      btn.textContent = "⏳";
+      btn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append("file", f);
+        const r = await fetch("/api/upload", { method: "POST", body: fd });
+        if (!r.ok) throw new Error(`upload 返回 ${r.status}`);
+        const data = await r.json();
+        // 写回 state + 触发 UI
+        input.value = data.file_id;
+        step.params[field.name] = data.file_id;
+        // 顺便：如果上传到的是 load.path，更新原图预览（沿用现有逻辑）
+        if (step.action === "load" && field.name === "path") {
+          state.uploaded = data;
+          renderSourcePreview();
+        }
+      } catch (e) {
+        alert(`上传失败: ${e.message || e}`);
+      } finally {
+        btn.textContent = "📎";
+        btn.disabled = false;
+      }
+    });
+
+    row.appendChild(btn);
+    row.appendChild(fileInput);
+    wrap.appendChild(row);
+    return wrap;
+  }
+
   wrap.appendChild(input);
   return wrap;
 }
@@ -350,15 +417,93 @@ async function handleUpload(file) {
   if (!res.ok) { alert("上传失败"); return; }
   const data = await res.json();
   state.uploaded = data;
-  $("#src-preview").innerHTML = `<img src="${data.url}" alt="src" />`;
-  $("#src-meta").textContent = `${data.filename} (${(data.size_bytes / 1024).toFixed(1)} KB)`;
+  state.batchUploaded = null;
+  renderSourcePreview();
   for (const s of state.steps) {
     if (s.action === "load") s.params.path = data.file_id;
   }
   renderPipeline();
 }
 
+async function handleBatchUpload(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (!state.actionMap.load_dir || !state.actionMap.pack_sheet || !state.actionMap.build_tsx_sheet) {
+    alert("缺少 load_dir / pack_sheet / build_tsx_sheet action，请重启 server 确认 action 已注册");
+    return;
+  }
+
+  const log = $("#log");
+  log.classList.remove("error");
+  log.textContent = `批量上传 ${files.length} 张图片…`;
+
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f);
+
+  let data;
+  try {
+    const res = await fetch("/api/upload-batch", { method: "POST", body: fd });
+    if (!res.ok) throw new Error(`upload-batch 返回 ${res.status}`);
+    data = await res.json();
+  } catch (e) {
+    log.classList.add("error");
+    log.textContent = `批量上传失败: ${e.message || e}`;
+    return;
+  }
+
+  state.uploaded = null;
+  state.batchUploaded = data;
+  renderBatchSourcePreview();
+  buildBatchTilesheetPipeline(data);
+  log.textContent = `已批量导入 ${data.count} 张图片，正在组成 tilesheet…`;
+  await handleRun();
+}
+
+// 把上传成功后的预览刷新抽出来，供顶栏上传 + filepath 字段 📎 上传共用
+function renderSourcePreview() {
+  const data = state.uploaded;
+  if (!data) return;
+  $("#src-preview").innerHTML = `<img src="${data.url}" alt="src" />`;
+  $("#src-meta").textContent = `${data.filename} (${(data.size_bytes / 1024).toFixed(1)} KB)`;
+}
+
+function renderBatchSourcePreview() {
+  const data = state.batchUploaded;
+  if (!data) return;
+  const files = data.files || [];
+  const cells = files.slice(0, 12).map(f => `
+    <div class="src-cell">
+      <img src="${f.url}?t=${Date.now()}" alt="${escapeHtml(f.filename)}" />
+    </div>
+  `).join("");
+  $("#src-preview").innerHTML = `<div class="src-grid">${cells}</div>`;
+  $("#src-meta").textContent = `${files.length} 张图片 → ${data.dir_id}（已自动生成 tilesheet pipeline）`;
+}
+
+function buildBatchTilesheetPipeline(data) {
+  const makeStep = (action, params) => {
+    const def = state.actionMap[action];
+    return { id: newId(), action, params: { ...defaultParams(def), ...params } };
+  };
+
+  state.steps = [];
+  state._uid = 0;
+  state.currentWid = "";
+  state.steps.push(
+    makeStep("load_dir", { path: data.dir_id, pattern: "*", sort: true, limit: 0 }),
+    makeStep("pack_sheet", { path: "auto", columns: null, spacing: 0, margin: 0, pad_anchor: "center" }),
+    makeStep("build_tsx_sheet", { path: "auto", name: "batch_tilesheet", tile_names: true }),
+  );
+  renderPipeline();
+}
+
+function isImageOutput(o) {
+  const s = String(o.file_id || o.path || o.url || "");
+  return /\.(png|webp|jpe?g|bmp|gif)$/i.test(s);
+}
+
 async function handleRun() {
+
   const log = $("#log");
   log.classList.remove("error");
   log.textContent = "运行中…";
@@ -399,23 +544,34 @@ async function handleRun() {
     $("#out-meta").textContent = `${data.elapsed_ms}ms`;
   } else if (outs.length === 1) {
     const last = outs[0];
-    const url = `${last.url}?t=${Date.now()}`;
-    $("#out-preview").innerHTML = `<img src="${url}" alt="out" />`;
+    const label = escapeHtml(last.name || last.label || last.file_id || last.path || "out");
+    if (isImageOutput(last)) {
+      const url = `${last.url}?t=${Date.now()}`;
+      $("#out-preview").innerHTML = `<img src="${url}" alt="out" />`;
+    } else {
+      $("#out-preview").innerHTML = `<a class="file-card" href="${last.url}" target="_blank" download>${label}</a>`;
+    }
     $("#out-meta").textContent = `${last.file_id || last.path}  (${data.elapsed_ms}ms)`;
   } else {
     const cols = (outs.length === 9) ? 3 : (outs.length <= 4 ? 2 : 3);
     const cells = outs.map(o => {
-      const url = `${o.url}?t=${Date.now()}`;
-      const label = escapeHtml(o.name || o.label || "");
-      return `<div class="out-cell">
-        <a href="${o.url}" target="_blank" download><img src="${url}" alt="${label}" /></a>
-        ${label ? `<span class="label">${label}</span>` : ""}
+      const label = escapeHtml(o.name || o.label || o.file_id || "");
+      if (isImageOutput(o)) {
+        const url = `${o.url}?t=${Date.now()}`;
+        return `<div class="out-cell">
+          <a href="${o.url}" target="_blank" download><img src="${url}" alt="${label}" /></a>
+          ${label ? `<span class="label">${label}</span>` : ""}
+        </div>`;
+      }
+      return `<div class="out-cell file-out">
+        <a href="${o.url}" target="_blank" download>${label || "file"}</a>
       </div>`;
     }).join("");
     $("#out-preview").innerHTML = `<div class="out-grid cols-${cols}">${cells}</div>`;
-    $("#out-meta").textContent = `${outs.length} 张产物，点击下载  (${data.elapsed_ms}ms)`;
+    $("#out-meta").textContent = `${outs.length} 个产物，点击下载  (${data.elapsed_ms}ms)`;
   }
 }
+
 
 function handleExport() {
   const data = {
@@ -545,10 +701,32 @@ function resolveOne(val, actionName, key) {
   const name = m[1];
   const def = m[2];
 
-  if (def !== undefined) return def;
+  if (def !== undefined) return coerceDefault(def);
   const guess = guessByContext(name, actionName, key);
   if (guess !== undefined) return guess;
   return "";
+}
+
+// 镜像后端 pipeline.py 的 _coerce_default —— 把 YAML/CLI 里的字符串默认值
+// 智能转为合适类型：${target:96} 默认 "96" 应该当 int 96，否则后续传给
+// PIL.Image.new((side, side)) 会 TypeError。
+function coerceDefault(s) {
+  if (s === "") return "";
+  const low = s.toLowerCase();
+  if (low === "true" || low === "yes") return true;
+  if (low === "false" || low === "no") return false;
+  if (low === "null" || low === "none" || low === "~") return null;
+  // int
+  if (/^-?\d+$/.test(s)) {
+    const n = parseInt(s, 10);
+    if (Number.isFinite(n)) return n;
+  }
+  // float
+  if (/^-?\d+\.\d+$/.test(s) || /^-?\.\d+$/.test(s) || /^-?\d+\.$/.test(s)) {
+    const f = parseFloat(s);
+    if (Number.isFinite(f)) return f;
+  }
+  return s;  // 非数字字符串原样保留（如 "auto"）
 }
 
 function guessByContext(varName, actionName, paramKey) {
@@ -615,7 +793,14 @@ function bindGlobalEvents() {
     e.target.value = "";
   });
 
+  $("#batch-upload-input").addEventListener("change", (e) => {
+    const files = e.target.files;
+    if (files?.length) handleBatchUpload(files);
+    e.target.value = "";
+  });
+
   $("#run-btn").addEventListener("click", handleRun);
+
   $("#export-btn").addEventListener("click", handleExport);
   $("#import-input").addEventListener("change", (e) => {
     const f = e.target.files?.[0];
@@ -631,6 +816,18 @@ function bindGlobalEvents() {
   $("#save-workflow-btn").addEventListener("click", handleSaveWorkflow);
   $("#delete-workflow-btn").addEventListener("click", handleDeleteWorkflow);
 
+  // 帮助弹层
+  const helpBtn = document.getElementById("help-btn");
+  if (helpBtn) {
+    helpBtn.addEventListener("click", openHelp);
+    console.log("[init] help button bound");
+  } else {
+    console.warn("[init] 找不到 #help-btn —— index.html 可能是旧版，硬刷一下 (Ctrl+Shift+R)");
+  }
+  document.querySelectorAll("#help-modal [data-close]").forEach(el => {
+    el.addEventListener("click", closeHelp);
+  });
+
   const ol = $("#pipeline");
   ol.addEventListener("dragover", (e) => e.preventDefault());
   ol.addEventListener("drop", (e) => {
@@ -641,7 +838,204 @@ function bindGlobalEvents() {
 
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.key === "Enter") { e.preventDefault(); handleRun(); }
+    // ? 打开帮助（非输入框里），Esc 关闭
+    if (e.key === "Escape" && !$("#help-modal").hasAttribute("hidden")) {
+      e.preventDefault(); closeHelp();
+    }
+    if (e.key === "?" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) {
+      e.preventDefault(); openHelp();
+    }
   });
+}
+
+// ---- 帮助弹层 ----
+
+let _docsCache = null;
+
+async function openHelp() {
+  console.log("[help] open");
+  const modal = $("#help-modal");
+  if (!modal) {
+    alert("帮助弹层 DOM 缺失：刷新一下（Ctrl+Shift+R）让 index.html 重载。");
+    return;
+  }
+  modal.hidden = false;
+  if (!_docsCache) {
+    try {
+      const r = await fetch("/api/docs");
+      if (!r.ok) throw new Error(`/api/docs 返回 ${r.status}`);
+      const d = await r.json();
+      _docsCache = d.docs || [];
+      console.log(`[help] 加载到 ${_docsCache.length} 篇教程`);
+    } catch (e) {
+      console.error("[help] 加载失败:", e);
+      $("#doc-content").innerHTML =
+        `<p style="color:#ef9999">加载教程列表失败: ${escapeHtml(String(e))}</p>`;
+      _docsCache = [];
+    }
+    renderDocList();
+    if (_docsCache.length) loadDoc(_docsCache[0].id);
+  }
+}
+
+function closeHelp() { $("#help-modal").hidden = true; }
+
+function renderDocList() {
+  const ul = $("#doc-list");
+  if (!_docsCache.length) {
+    ul.innerHTML = `<li class="muted">暂无教程（scripts/docs/*.md）</li>`;
+    return;
+  }
+  ul.innerHTML = _docsCache.map(d =>
+    `<li data-id="${escapeHtml(d.id)}">${escapeHtml(d.title)}</li>`
+  ).join("");
+  ul.querySelectorAll("li[data-id]").forEach(li => {
+    li.addEventListener("click", () => loadDoc(li.dataset.id));
+  });
+}
+
+async function loadDoc(id) {
+  $("#doc-list").querySelectorAll("li").forEach(li => {
+    li.classList.toggle("active", li.dataset.id === id);
+  });
+  const box = $("#doc-content");
+  box.innerHTML = `<p class="muted">加载中…</p>`;
+  try {
+    const r = await fetch(`/api/docs/${encodeURIComponent(id)}`);
+    if (!r.ok) throw new Error(r.statusText);
+    const d = await r.json();
+    box.innerHTML = renderMarkdown(d.content);
+    box.scrollTop = 0;
+  } catch (e) {
+    box.innerHTML = `<p style="color:#ef9999">加载失败: ${escapeHtml(String(e))}</p>`;
+  }
+}
+
+// 极简 markdown 渲染器（仅支持本项目 docs 用到的语法子集）
+// 故意不引第三方库——保持前端零构建零依赖。
+// 支持：# ## ### | ``` ``` 代码块 | `inline` | **bold** *italic* |
+// - / * / 1. 列表 | > 引用 | --- 分隔线 | | table | | [link](url) |
+function renderMarkdown(src) {
+  // Windows 环境下 markdown 文件常是 CRLF，去掉 \r 让行尾正则稳定
+  const lines = src.replace(/\r\n?/g, "\n").split("\n");
+  const out = [];
+  let i = 0;
+
+  // 预处理：把代码块先切出来占位，避免后续 inline 处理乱入
+  const codeBlocks = [];
+  const joined = lines.join("\n").replace(/```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g,
+    (_, lang, body) => {
+      const idx = codeBlocks.length;
+      codeBlocks.push({ lang, body });
+      return `\u0001CODE${idx}\u0001`;
+    });
+  const safeLines = joined.split("\n");
+
+  while (i < safeLines.length) {
+    const line = safeLines[i];
+
+    // 代码块占位
+    const cm = line.match(/^\u0001CODE(\d+)\u0001$/);
+    if (cm) {
+      const cb = codeBlocks[+cm[1]];
+      out.push(`<pre><code>${escapeHtml(cb.body)}</code></pre>`);
+      i++; continue;
+    }
+
+    // 标题
+    const h = line.match(/^(#{1,6})\s+(.+)$/);
+    if (h) {
+      const lv = h[1].length;
+      out.push(`<h${lv}>${renderInline(h[2])}</h${lv}>`);
+      i++; continue;
+    }
+
+    // 水平分割
+    if (/^---+\s*$/.test(line)) { out.push("<hr/>"); i++; continue; }
+
+    // 表格（至少两行：| a | b |  和  | --- | --- |）
+    if (/^\s*\|/.test(line) && i + 1 < safeLines.length && /^\s*\|[\s\-:|]+\|\s*$/.test(safeLines[i+1])) {
+      const rows = [];
+      while (i < safeLines.length && /^\s*\|/.test(safeLines[i])) {
+        rows.push(safeLines[i]); i++;
+      }
+      const header = splitTableRow(rows[0]);
+      const body = rows.slice(2).map(splitTableRow);
+      out.push("<table><thead><tr>" +
+        header.map(c => `<th>${renderInline(c)}</th>`).join("") +
+        "</tr></thead><tbody>" +
+        body.map(r => "<tr>" + r.map(c => `<td>${renderInline(c)}</td>`).join("") + "</tr>").join("") +
+        "</tbody></table>");
+      continue;
+    }
+
+    // 引用块
+    if (/^>\s?/.test(line)) {
+      const buf = [];
+      while (i < safeLines.length && /^>\s?/.test(safeLines[i])) {
+        buf.push(safeLines[i].replace(/^>\s?/, ""));
+        i++;
+      }
+      out.push("<blockquote>" + renderInline(buf.join(" ")) + "</blockquote>");
+      continue;
+    }
+
+    // 无序列表
+    if (/^\s*[-*+]\s+/.test(line)) {
+      const buf = [];
+      while (i < safeLines.length && /^\s*[-*+]\s+/.test(safeLines[i])) {
+        buf.push(safeLines[i].replace(/^\s*[-*+]\s+/, ""));
+        i++;
+      }
+      out.push("<ul>" + buf.map(x => `<li>${renderInline(x)}</li>`).join("") + "</ul>");
+      continue;
+    }
+
+    // 有序列表
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const buf = [];
+      while (i < safeLines.length && /^\s*\d+\.\s+/.test(safeLines[i])) {
+        buf.push(safeLines[i].replace(/^\s*\d+\.\s+/, ""));
+        i++;
+      }
+      out.push("<ol>" + buf.map(x => `<li>${renderInline(x)}</li>`).join("") + "</ol>");
+      continue;
+    }
+
+    // 空行 → 段落分隔
+    if (!line.trim()) { i++; continue; }
+
+    // 普通段落（连续非空行合并）
+    const buf = [line];
+    i++;
+    while (i < safeLines.length && safeLines[i].trim() &&
+           !/^(#{1,6}\s|[-*+]\s|\d+\.\s|>|```|---+\s*$|\s*\|)/.test(safeLines[i]) &&
+           !/^\u0001CODE\d+\u0001$/.test(safeLines[i])) {
+      buf.push(safeLines[i]); i++;
+    }
+    out.push("<p>" + renderInline(buf.join(" ")) + "</p>");
+  }
+
+  return out.join("\n");
+}
+
+function splitTableRow(row) {
+  return row.trim().replace(/^\||\|$/g, "").split("|").map(s => s.trim());
+}
+
+function renderInline(s) {
+  // 先 escape，再把 markdown 特征用占位符保护，处理完再注入 tag
+  s = escapeHtml(s);
+  // `code`
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  // **bold**
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  // *italic*（需避开已处理的 **）
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+  // [text](url)
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,
+    (_, t, u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`);
+  return s;
 }
 
 function escapeHtml(s) {

@@ -1,0 +1,49 @@
+name: wang_2edge_set
+description: |
+  Wang 2-edge tile 集合生成器（沙↔水 等过渡素材）。
+  默认使用几何蒙版（快速验证逻辑通），如要换成自己画的蒙版，把
+  gen_default_masks 替换成 load_dir 即可（注释里给了示例）。
+
+  最终产物：一张 4x4 sheet PNG + 一份 Tiled .tsx，可直接拖进 Tiled
+  当 Edge Set 使用（terrain 顺序：0 = background, 1 = foreground）。
+
+steps:
+  # ---- A. 生成几何蒙版（验证 / 起稿用）---------------------
+  - action: gen_default_masks
+    params:
+      size: ${tile_size:32}        # tile 尺寸（像素）
+      half_extent: 0.5             # 过渡带宽度比例（0..1）
+
+  # ---- B. 用自己画的 16 张蒙版（量产用，取消注释并删掉上面 A 即可）
+  # - action: load_dir
+  #   params:
+  #     path: ${mask_dir}          # CLI 传 -v mask_dir=path/to/masks
+  #     pattern: "mask_*.png"
+  #     sort: true
+  #     limit: 16
+
+  # ---- 用两张底图按蒙版混合，得到 16 张 wang tile -----------
+  - action: mask_blend_set
+    params:
+      foreground: ${fg}            # CLI 传 -v fg=sand_tile.png
+      background: ${bg}            # CLI 传 -v bg=water_tile.png
+      resample: nearest            # 像素美术必备；高分辨率素材可改 bicubic
+
+  # ---- 拼 4x4 sheet -----------------------------------------
+  - action: pack_sheet
+    params:
+      columns: 4
+      spacing: 0
+      margin: 0
+      path: ${output:auto}
+
+  # ---- 生成 Tiled .tsx（自动写入 Edge Set，不需要手工逐格标边） ----
+  - action: build_tsx_sheet
+    params:
+      name: ${name:wang_2edge}
+      tile_names: true
+      wang_2edge: true
+      wangset_name: ${wangset_name:wang_2edge}
+      background_name: ${background_name:background}
+      foreground_name: ${foreground_name:foreground}
+
