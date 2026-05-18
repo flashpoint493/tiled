@@ -1,17 +1,19 @@
-name: wang_2edge_set_iso_terrain
+﻿name: wang_2edge_set_iso_terrain
 description: |
   Wang 2-edge tile set 的 Tiled Isometric Terrain Brush 版本。
 
   和 wang_2edge_set_iso 的区别：
-    - wang_2edge_set_iso：每张 tile 放进 96×96 透明画布，适合视觉预览 / 物件垫底。
-    - 本 workflow：每张 tile 也放进 96×96 透明画布，方便在 Tileset 编辑器里
-      框选/标记；但 .tsx 会写入 <grid orientation="isometric" width="96" height="48"/>
-      和 <tileoffset x="0" y="24"/>，让地图使用 96×48 的 isometric grid。
+    - wang_2edge_set_iso：每张 tile 放进 256×256 透明画布，适合视觉预览 / 物件垫底。
+    - 本 workflow：每张 tile 也放进 256×256 透明画布，方便在 Tileset 编辑器里
+      框选/标记；但 .tsx 会写入 <grid orientation="isometric" width="256" height="128"/>
+      和 <tileoffset x="0" y="64"/>，让地图使用 256×128 的 isometric grid。
+
 
 
   适合用作真正的 Tiled isometric map terrain brush：
-    - Map: Orientation = Isometric, Tile Width = 96, Tile Height = 48
-    - Tileset cell = 96×96, Grid = Isometric 96×48, tileoffset.y = 24
+    - Map: Orientation = Isometric, Tile Width = 256, Tile Height = 128
+    - Tileset cell = 256×256, Grid = Isometric 256×128, tileoffset.y = 64
+
 
     - Terrain Set: Edge Set（按 Tiled 逻辑 Top/Right/Bottom/Left 标边）
 
@@ -37,32 +39,27 @@ steps:
       background: ${bg}
       resample: ${resample:nearest}
 
-  # ---- 每张 tile 转成 iso footprint，再放进 target × target 画布，方便 tileset 编辑器框选/标记 ----
+  # ---- 用一个下拉预设控制最终规格：cell=N×N，grid=N×N/2，tileoffset.y=N/4 ----
+  - action: iso45_tile_spec
+    params:
+      preset: ${spec:256}
 
+  # ---- 每张 tile 转成 iso footprint，再放进所选规格的 cell，方便 tileset 编辑器框选/标记 ----
   - action: for_each
     params:
       source: tiles
       steps:
-        - action: topdown_to_iso
+        - action: iso45_fit_tile
           params:
-            anchor: center
-            angle: 45
-            y_scale: 0.5
-            resample: ${resample:bicubic}
-            trim: false
-        - action: scale
-          params:
-            size:
-              - ${target:96}
-              - ${half_target:48}
-            resample: ${resample:bicubic}
-        - action: square_canvas
-          params:
-            size: ${target:96}
+            preset: context
             anchor: ${anchor:center}
+            resample: ${resample:bicubic}
             background: [0, 0, 0, 0]
 
-  # ---- 拼 4×4 terrain tilesheet：每格 96×96，但 grid 是 96×48 ----
+
+  # ---- 拼 4×4 terrain tilesheet：每格跟随 iso45_tile_spec；grid 是 N×N/2 ----
+
+
 
   - action: pack_sheet
     params:
@@ -77,16 +74,15 @@ steps:
       path: ${tsx:auto}
       name: ${name:wang_2edge_iso_terrain}
       tile_names: true
-      grid_orientation: isometric
-      grid_width: ${target:96}
-      grid_height: ${half_target:48}
-      tileoffset_x: ${tileoffset_x:0}
-      tileoffset_y: ${tileoffset_y:24}
+      terrain_spec: context
+
       wang_2edge: true
+
       wangset_name: ${wangset_name:wang_2edge_iso_terrain}
       background_name: ${background_name:background}
       foreground_name: ${foreground_name:foreground}
       wang_transform: iso45_ccw
+
 
 
 

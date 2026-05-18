@@ -1,4 +1,4 @@
-name: wang_2edge_corner_set_iso_terrain
+﻿name: wang_2edge_corner_set_iso_terrain
 description: |
   同时生成完整 Edge Set + Corner Set 的 Tiled Isometric Terrain tileset。
 
@@ -6,7 +6,9 @@ description: |
     - 16 张 Edge Set tile（code: N/E/S/W）
     - 16 张 Corner Set tile（code: TL/TR/BR/BL）
 
-  最终 sheet 是 8×4、共 32 格；每格 96×96，内部 grid 是 96×48 isometric。
+  最终 sheet 是 8×4、共 32 格；每格跟随 iso45_tile_spec（默认 256×256），内部 grid 默认是 256×128 isometric。
+
+
   .tsx 会自动写入两个 wangset：type="edge" 和 type="corner"。
 
 steps:
@@ -25,29 +27,23 @@ steps:
       resample: ${resample:nearest}
       expected: 32
 
-  # ---- 每张 tile 转成 iso footprint，再放进 target × target 画布 ----
+  # ---- 用一个下拉预设控制最终规格：cell=N×N，grid=N×N/2，tileoffset.y=N/4 ----
+  - action: iso45_tile_spec
+    params:
+      preset: ${spec:256}
+
+  # ---- 每张 tile 转成 iso footprint，再放进所选规格的 cell ----
   - action: for_each
     params:
       source: tiles
       steps:
-        - action: topdown_to_iso
+        - action: iso45_fit_tile
           params:
-            anchor: center
-            angle: 45
-            y_scale: 0.5
-            resample: ${resample:bicubic}
-            trim: false
-        - action: scale
-          params:
-            size:
-              - ${target:96}
-              - ${half_target:48}
-            resample: ${resample:bicubic}
-        - action: square_canvas
-          params:
-            size: ${target:96}
+            preset: context
             anchor: ${anchor:center}
+            resample: ${resample:bicubic}
             background: [0, 0, 0, 0]
+
 
   # ---- 拼成 8×4 sheet：前 16 格 edge，后 16 格 corner ----
   - action: pack_sheet
@@ -63,12 +59,10 @@ steps:
       path: ${tsx:auto}
       name: ${name:wang_2edge_corner_iso_terrain}
       tile_names: true
-      grid_orientation: isometric
-      grid_width: ${target:96}
-      grid_height: ${half_target:48}
-      tileoffset_x: ${tileoffset_x:0}
-      tileoffset_y: ${tileoffset_y:24}
+      terrain_spec: context
+
       wang_2edge: true
+
       wang_2corner: true
       edge_offset: 0
       corner_offset: 16
@@ -77,4 +71,5 @@ steps:
       background_name: ${background_name:background}
       foreground_name: ${foreground_name:foreground}
       wang_transform: iso45_ccw
+
 

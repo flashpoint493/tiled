@@ -58,7 +58,10 @@ pip install -r requirements.txt
 | `rotate` | 任意角度旋转，可选 expand |
 | `scale` | 缩放，支持非等比 |
 | `topdown_to_iso` | 复合：square_canvas + rotate(45) + scale(sy=0.5) + 可选 trim |
+| `iso45_tile_spec` | 用下拉预设选择 iso45 最终规格（96/128/256/512/custom） |
+| `iso45_fit_tile` | Topdown tile → iso45 菱形 → 放入所选规格 cell |
 | `iso_to_topdown` | `topdown_to_iso` 的几何逆（scale + rotate(-45) + trim） |
+
 | `split_3x3` | 把"3×3 循环 tile / auto-tile"图拆成 9 张（NW/N/NE/W/C/E/SW/S/SE） |
 | `for_each` | 对上一步产出的多张图批量执行子 pipeline |
 | `pack_sheet` | 把 `ctx.extras["tiles"]` 拼成单张 sprite sheet PNG（Tiled 友好） |
@@ -271,16 +274,19 @@ python -m tiled_tools run pipelines/wang_2edge_set.yaml \
 ```
 
 产物：一张 4×4 sheet PNG + 一份 Tiled `.tsx`，**用几何蒙版自动生成**
-（16 张蒙版由 `gen_default_masks` 出，包含边带和拐角圆角过渡）。`.tsx` 会自动写入 Edge Set 的 `<wangsets>` 元数据，所以不用在透明 padding 很多的 sheet 上手工逐格标边；之后用
+（16 张蒙版由 `gen_default_masks` 出，包含边带和拐角圆角过渡）。`.tsx` 会自动写入 Edge Set 的 `<wangsets>` 元数据，所以不用手工逐格标边；之后用
 `load_dir` 换成美术蒙版即可量产。
 
-
+如果要非 iso 但同时包含完整 Edge Set + Corner Set，用 `wang_2edge_corner_set`：两张四方连续贴图 → 32 格 8×4 sheet + 自动写两个 wangset 的 `.tsx`。默认每格 `256×256`，可用 `-v tile_size=128/512` 调整。
 
 需要 iso 45° 视角的版本？有两种：
 
-- `wang_2edge_set_iso`：每张过渡 tile 单独 iso 化，再拼 4×4 iso sheet；每格是 96×96 透明画布，适合视觉 tileset / 物件垫底。
-- `wang_2edge_set_iso_terrain`：每格是 96×96 tileset 单元（方便框选/标记），但 `.tsx` 写入 96×48 isometric grid + tileoffset，适合真正在 Tiled Isometric Map 里用 Terrain Brush。
-- `wang_2edge_corner_set_iso_terrain`：生成 32 格 sheet，前 16 格是完整 Edge Set，后 16 格是完整 Corner Set，并在 `.tsx` 自动写入两个地形集。
+
+- `wang_2edge_set_iso`：每张过渡 tile 单独 iso 化，再拼 4×4 iso sheet；默认每格是 256×256 透明画布，适合视觉 tileset / 物件垫底。规格由 `iso45_tile_spec.preset` 下拉控制（96/128/256/512/custom）。
+- `wang_2edge_set_iso_terrain`：默认每格是 256×256 tileset 单元（方便框选/标记），但 `.tsx` 写入 256×128 isometric grid + tileoffset，适合真正在 Tiled Isometric Map 里用 Terrain Brush；改 preset 时 cell/grid/tileoffset 会联动。
+
+- `wang_2edge_corner_set_iso_terrain`：生成 32 格 sheet，前 16 格是完整 Edge Set，后 16 格是完整 Corner Set，并在 `.tsx` 自动写入两个地形集；同样支持规格下拉。
+
 
 - `wang_2edge_big_iso`：按边匹配矩阵先拼一张完整 3×3 平面地图，再把整张图整体 iso 化，适合美术预览 / mock-up / 一张大装饰图。默认 `lake3` 会反转外围 8 格方向，四角都是拐角过渡 tile，不是简单的 0..15 lookup sheet。
 

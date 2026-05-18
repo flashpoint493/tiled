@@ -1,4 +1,4 @@
-# scripts/tiled_tools 工具链能力速查
+﻿# scripts/tiled_tools 工具链能力速查
 
 本仓库 `scripts/tiled_tools/` 提供了一套 **Action + Pipeline** 框架，把 Tiled 资源准备阶段的常见任务自动化。本文档让另一个 CodeBuddy 实例能快速判断"该用哪条 pipeline"以及"怎么跑"。
 
@@ -69,10 +69,14 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 | `tile_repeat_3x3` | 单张贴图按 3×3 平铺成大图（验证循环 / 铺地预览） | 1 PNG |
 | `batch_images_to_tilesheet` | 多张独立图片 / 一个目录 → 拼成单张 tilesheet + `.tsx`（Web 顶栏「批量导入」会自动走这条链路） | 1 PNG + 1 TSX |
 | `wang_2edge_set` | 两张底图（foreground/background）→ 16 张过渡 tile + sheet + .tsx（沙↔水 等 edge-style 过渡素材） | 1 PNG + 1 TSX |
+| `wang_2edge_corner_set` | 两张底图 → 非 iso 的 32 格 sheet + .tsx；前 16 格 edge、后 16 格 corner，并自动写两个 wangset | 1 PNG + 1 TSX |
 
-| `wang_2edge_set_iso` | 同 `wang_2edge_set`，但每张过渡 tile 被单独 iso 45° 化，最终是 96×96 画布的视觉 tileset sheet | 1 PNG + 1 TSX |
-| `wang_2edge_set_iso_terrain` | 同 `wang_2edge_set`，但每张 tile 放在 96×96 tileset 单元中，同时在 `.tsx` 写入 96×48 isometric grid + tileoffset，适合 Tiled Isometric Terrain Brush 框选/标记 | 1 PNG + 1 TSX |
-| `wang_2edge_corner_set_iso_terrain` | 同时生成完整 Edge Set + Corner Set：前 16 格 edge，后 16 格 corner，并在 `.tsx` 自动写两个 wangset | 1 PNG + 1 TSX |
+| `wang_2edge_set_iso` | 同 `wang_2edge_set`，但每张过渡 tile 被单独 iso 45° 化，默认最终是 256×256 画布的视觉 tileset sheet；规格由 `iso45_tile_spec.preset` 下拉控制 | 1 PNG + 1 TSX |
+
+| `wang_2edge_set_iso_terrain` | 同 `wang_2edge_set`，但每张 tile 默认放在 256×256 tileset 单元中，同时在 `.tsx` 写入 256×128 isometric grid + tileoffset，适合 Tiled Isometric Terrain Brush；改 preset 时 cell/grid/tileoffset 联动 | 1 PNG + 1 TSX |
+
+| `wang_2edge_corner_set_iso_terrain` | 同时生成完整 Edge Set + Corner Set：前 16 格 edge，后 16 格 corner，并在 `.tsx` 自动写两个 wangset；同样支持规格下拉 | 1 PNG + 1 TSX |
+
 
 | `wang_2edge_big_iso` | 按边匹配矩阵拼完整 3×3 平面地图，再把整张图整体 iso 45° 化（默认 `lake3`，反转外围 8 格方向，四角都是拐角过渡 tile；不是 0..15 lookup sheet） | 平面图 + 1 PNG |
 
@@ -97,7 +101,10 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 | `rotate` | `ctx.image` | 旋转后的图 | `angle`, `expand`, `resample` |
 | `scale` | `ctx.image` | 缩放后的图 | `sx`, `sy`, `factor`, `size` |
 | `topdown_to_iso` | `ctx.image` | iso 化的图 | `anchor`, `angle=45`, `y_scale=0.5`, `trim` |
+| `iso45_tile_spec` | — | `ctx.meta` 中的 iso45 规格 | `preset=96/128/256/512/custom`（Web 下拉控制最终 cell/grid/tileoffset） |
+| `iso45_fit_tile` | `ctx.image` | 按规格放入 cell 的 iso45 tile | `preset=context`, `anchor`, `resample` |
 | `iso_to_topdown` | `ctx.image` | 反推回 topdown 的图 | `y_scale=2.0`, `angle=-45`, `pad_before_scale`, `trim`（`topdown_to_iso` 的几何逆） |
+
 | `split_3x3` | `ctx.image` | 9 张 tiles + tile_names | `mode=equal/border`, `border` |
 | `for_each` | `ctx.extras["tiles"]` | 批量处理后的 tiles | `source`, `steps`（子 pipeline） |
 | `pack_sheet` | `ctx.extras["tiles"]` | sprite sheet PNG + sheet 元数据 | `columns`, `spacing`, `margin`, `tile_w`, `tile_h`, `pad_anchor` |
@@ -208,52 +215,36 @@ steps:
 **Tiled 这边**：把产物 `.tsx` 拖进 Tiled 后，Terrain Sets 面板里会已有自动生成的 **Edge Set**（写在 `<wangsets>` 里）。通常只需要改 terrain 名称 / 颜色并开始刷，不需要在透明 padding 很多的 sheet 上手工逐 tile 标边。
 
 
-### 配方 A5：Wang 2-edge 过渡素材 + iso 45° 视角（标准化到 96×96 画布）
+### 配方 A5：Wang 2-edge 过渡素材 + iso 45° 视角（规格下拉控制）
 
-和 A4 输入完全一致，但每张过渡 tile 被 iso 化成菱形并放在 96×96 正方形画布
-正中（菱形宽 96 高 48，上下各 24px 透明边）—— Tiled isometric 模式标准形态。
+和 A4 输入完全一致，但每张过渡 tile 被 iso 化成菱形并放在 `N×N` 正方形画布中。
+`N` 由 `iso45_tile_spec.preset` 控制，Web 里是下拉菜单（96 / 128 / 256 / 512 / custom）；默认 `256` 表示菱形 footprint 为 `256×128`。
 
 ```yaml
 steps:
   - { action: gen_default_masks, params: { size: ${tile_size:32}, half_extent: 0.5 } }
   - { action: mask_blend_set, params: { foreground: ${fg}, background: ${bg}, resample: nearest } }
+  - { action: iso45_tile_spec, params: { preset: ${spec:256} } }
   - action: for_each
     params:
       source: tiles
       steps:
-        - action: topdown_to_iso
+        - action: iso45_fit_tile
           params:
-            anchor: center
-            angle: 45
-            y_scale: 0.5         # 2:1 dimetric；60° 真等距用 0.5774
-            resample: bicubic
-            trim: false          # 关键：保证 16 张产出形状一致
-        - action: scale          # 标准化菱形尺寸到 target × target/2
-          params:
-            size: [${target:96}, ${half_target:48}]
-            resample: bicubic
-        - action: square_canvas  # 上方补透明边到 target × target 画布
-          params:
-            size: ${target:96}
-            # 默认 bottom-center：菱形贴底，上方留 (target - half_target) 透明
-            # 像素给立绘 / 高物体；想居中改成 center
+            preset: context
             anchor: ${anchor:bottom-center}
+            resample: bicubic
             background: [0, 0, 0, 0]
   - { action: pack_sheet, params: { columns: 4, path: auto } }
   - { action: build_tsx_sheet, params: { name: ${name:wang_2edge_iso}, tile_names: true } }
 ```
 
-**默认尺寸**：target=96 → 每张 tile 96×96 画布，4×4 sheet = 384×384。
-要改成 128×128 或 64×64：CLI 传 `-v target=128 -v half_target=64`，或
-直接编辑 yaml 里的 `${target:96}` 默认值。
+**默认尺寸**：`spec=256` → 每张 tile 256×256 画布，4×4 sheet = 1024×1024。
+要改成 128×128 或 512×512：Web 改 `iso45_tile_spec.preset` 下拉，CLI 传 `-v spec=128/512`。
 
-**注意 1**：上面 YAML 例子的 `size: [...]` flow style 在某些 YAML 里跟
-`${...}` 占位会冲突，工作 workflow 文件用 block style（每个元素一行 `-`）
-更稳。
+**注意**：默认 tsx orientation 是普通方块。要用作真正的 Tiled isometric
+地图 tileset，优先使用 `wang_2edge_set_iso_terrain`，它会自动写入 isometric grid / tileoffset。
 
-**注意 2**：默认 tsx orientation 是普通方块。要用作真正的 Tiled isometric
-地图 tileset：Edit Tileset → Orientation 改为 Isometric，Tile Width=96，
-Tile Height=48（菱形外接，不是画布高）。
 
 ### 配方 B：3x3 循环 tile → 9 张散文件
 
@@ -392,4 +383,5 @@ class MyAction(Action):
 - 工具链产物 tsx 是 XML，不是 JSON（与教程推荐的 `.tsj` 不一致）。若需要 JSON：用 Tiled 打开 tsx → `File → Save As...` → 选 JSON 格式。
 - `for_each` 暂不支持嵌套（显式拒绝）。批量处理需要嵌套时考虑写一个新复合 action。
 - Web 顶栏「批量导入」只负责把多张独立图片组成一个 tilesheet；还不是“对一个目录里的每张源图分别跑同一 workflow”的通用目录批处理。
+
 

@@ -19,10 +19,14 @@
 - tile_names  : 是否给每个 tile 加 <tile id="n"><properties>...
                 把 sheet.tile_names（如 NW/N/NE...）写进去做成命名属性。
                 默认 True（便于在 Tiled 里通过名字选 tile）。
+- terrain_spec:
+                可选读取 iso45_tile_spec 写入的规格，或直接选择 96/128/256/512，
+                自动填写 isometric grid 与 tileoffset。
 - grid_orientation / grid_width / grid_height:
                 可选写入 <grid orientation="isometric" width="..." height="..."/>，
                 让 Tiled 在 tileset 编辑器里正确显示 isometric terrain overlay。
 - tileoffset_x / tileoffset_y:
+
                 可选写入 <tileoffset x="..." y="..."/>。isometric tile 图像单元
                 高于 map grid 时常用 y=(tileheight-gridheight)/2。
 - wang_2edge / wang_2corner:
@@ -47,9 +51,11 @@ from xml.sax.saxutils import escape as xml_escape
 
 from ..core.action import Action, Context
 from ..core.registry import register
+from .iso45_tile_spec import resolve_iso45_tile_spec
 
 
 TILED_VERSION = "1.11"
+
 TSX_VERSION = "1.10"
 
 
@@ -128,7 +134,9 @@ class BuildTsxSheetAction(Action):
     description = "为 pack_sheet 产出的 sheet 生成 Tiled 可识别的 .tsx"
     param_hints = {
         "path": {"widget": "filepath"},
+        "terrain_spec": {"enum": ["", "context", "96", "128", "256", "512"]},
         "grid_orientation": {"enum": ["", "orthogonal", "isometric"]},
+
         "grid_width": {"min": 1, "step": 1},
         "grid_height": {"min": 1, "step": 1},
         "tileoffset_x": {"step": 1},
@@ -146,7 +154,9 @@ class BuildTsxSheetAction(Action):
         path: str = "auto",
         name: Optional[str] = None,
         tile_names: bool = True,
+        terrain_spec: str = "",
         grid_orientation: str = "",
+
         grid_width: Optional[int] = None,
         grid_height: Optional[int] = None,
         tileoffset_x: Optional[int] = None,
@@ -219,6 +229,21 @@ class BuildTsxSheetAction(Action):
         if margin:
             attrs.insert(-1, f'margin="{margin}"')
         lines.append("<tileset " + " ".join(attrs) + ">")
+
+        terrain_spec = str(terrain_spec or "").strip()
+        if terrain_spec:
+            spec = resolve_iso45_tile_spec(ctx, terrain_spec)
+            if not grid_orientation:
+                grid_orientation = "isometric"
+            if grid_width is None:
+                grid_width = int(spec["grid_width"])
+            if grid_height is None:
+                grid_height = int(spec["grid_height"])
+            if tileoffset_x is None:
+                tileoffset_x = int(spec["tileoffset_x"])
+            if tileoffset_y is None:
+                tileoffset_y = int(spec["tileoffset_y"])
+
         if tileoffset_x is not None or tileoffset_y is not None:
             ox = int(tileoffset_x or 0)
             oy = int(tileoffset_y or 0)
@@ -226,6 +251,7 @@ class BuildTsxSheetAction(Action):
         grid_orientation = (grid_orientation or "").strip().lower()
 
         if grid_orientation:
+
             if grid_orientation not in ("orthogonal", "isometric"):
                 raise ValueError(
                     "[build_tsx_sheet] grid_orientation 应为 '' / orthogonal / isometric"

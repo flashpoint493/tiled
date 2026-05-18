@@ -1,0 +1,56 @@
+name: wang_2edge_corner_set
+description: |
+  非 isometric 版本：用两张四方连续贴图直接生成完整 Edge Set + Corner Set tilesheet。
+
+  输入：
+    - foreground：前景地形贴图（如 sand）
+    - background：背景地形贴图（如 water）
+
+  输出：
+    - 16 张 Edge Set tile（code: N/E/S/W）
+    - 16 张 Corner Set tile（code: TL/TR/BR/BL）
+    - 8×4 sheet PNG + 自动写入两个 wangset 的 .tsx
+
+  默认每格 256×256，最终 sheet 为 2048×1024。要换规格改 tile_size 即可。
+  注意：这里不做 iso45 / isometric grid / tileoffset；适合 orthogonal/topdown tileset。
+
+steps:
+  # ---- 同时生成 edge + corner 两套几何蒙版 ----
+  - action: gen_default_masks
+    params:
+      size: ${tile_size:256}
+      half_extent: ${half_extent:0.5}
+      mode: both
+
+  # ---- 用两张底图按蒙版混合，得到 32 张 tile ----
+  - action: mask_blend_set
+    params:
+      foreground: ${fg}
+      background: ${bg}
+      resample: ${resample:nearest}
+      expected: 32
+
+  # ---- 拼成 8×4 sheet：前 16 格 edge，后 16 格 corner ----
+  - action: pack_sheet
+    params:
+      columns: 8
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      path: ${output:auto}
+
+  # ---- 生成带 Edge Set + Corner Set 的 Tiled .tsx ----
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:wang_2edge_corner}
+      tile_names: true
+
+      wang_2edge: true
+      wang_2corner: true
+      edge_offset: 0
+      corner_offset: 16
+      wangset_name: ${edge_wangset_name:edge_set}
+      corner_wangset_name: ${corner_wangset_name:corner_set}
+      background_name: ${background_name:background}
+      foreground_name: ${foreground_name:foreground}
+      wang_transform: none

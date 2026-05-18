@@ -527,7 +527,9 @@ def _materialize_output_path(raw: Any) -> Path:
 # 也是想要文件名"123"），不能误转成 int。
 _STRING_SEMANTIC_KEYS = {
     "path", "dir", "pattern", "name", "source", "anchor", "mode",
+    "preset", "terrain_spec", "grid_orientation", "wang_transform",
     "resample", "method", "format", "prefix",
+
     "foreground", "background",  # mask_blend_set 的输入路径
     "action",                    # for_each 嵌套 step 的 action 名
 }

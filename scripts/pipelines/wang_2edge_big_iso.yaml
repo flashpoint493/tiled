@@ -1,4 +1,4 @@
-name: wang_2edge_big_iso
+﻿name: wang_2edge_big_iso
 description: |
   Wang 2-edge 的“整张 3×3 大图整体 iso 化”版本。
 
@@ -68,18 +68,21 @@ steps:
       resample: ${resample:bicubic}
       trim: false
 
-  # ---- 可选：统一到指定大图尺寸。默认 288×144，对应 3×3 每格 96×48 的整体 footprint ----
+  # ---- 可选：统一到指定大图尺寸。默认 768×384，对应 3×3 每格 256×128 的整体 footprint ----
+
   - action: scale
     params:
       size:
-        - ${target:288}
-        - ${half_target:144}
+        - ${target:768}
+        - ${half_target:384}
+
       resample: ${resample:bicubic}
 
   # ---- 可选：放进 target×target 透明画布，方便在 Tiled 里当一张大图摆放 ----
   - action: square_canvas
     params:
-      size: ${target:288}
+      size: ${target:768}
+
 
       anchor: ${anchor:bottom-center}
       background: [0, 0, 0, 0]
@@ -88,3 +91,4 @@ steps:
   - action: save
     params:
       path: ${output:auto}
+

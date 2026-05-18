@@ -1,4 +1,4 @@
-# Workflow 配方
+﻿# Workflow 配方
 
 > 12 个内置 workflow + 经典组合的速查。
 
@@ -17,9 +17,11 @@
 | `batch_images_to_tilesheet` | 多张独立图片 / 一个目录 | 1 张 sheet + 1 .tsx | 批量导入图片组成 Tiled tilesheet |
 | `make_seamless` | 1 张贴图 | 无缝单图 + 3×3 验证图 | 把素材变成四方连续 |
 
-| **`wang_2edge_set`** | 2 张底图（沙/水）| 1 张 sheet + 1 .tsx | 过渡素材自动合成 |
+| **`wang_2edge_set`** | 2 张底图（沙/水）| 1 张 sheet + 1 .tsx | 自动 Edge Set 过渡素材 |
+| **`wang_2edge_corner_set`** | 2 张底图（沙/水）| 32 格 sheet + 1 .tsx | 非 iso，完整 Edge Set + Corner Set |
 | **`wang_2edge_set_iso`** | 2 张底图（沙/水）| 1 张 iso sheet + 1 .tsx | 16 张 tile 分别 iso 化，适合做视觉 tileset |
-| **`wang_2edge_set_iso_terrain`** | 2 张底图（沙/水）| 1 张 96×96 cell sheet + 1 .tsx | 自动 Edge Set，用于 Tiled Isometric Terrain Brush |
+
+| **`wang_2edge_set_iso_terrain`** | 2 张底图（沙/水）| 1 张 256×256 cell sheet + 1 .tsx | 自动 Edge Set，用于 Tiled Isometric Terrain Brush |
 | **`wang_2edge_corner_set_iso_terrain`** | 2 张底图（沙/水）| 32 格 sheet + 1 .tsx | 同时自动 Edge Set + Corner Set |
 | **`wang_2edge_big_iso`** | 2 张底图（沙/水）| 平面 3×3 图 + 1 张完整 iso 大图 | 先拼完整 3×3 图，再整体 iso 化 |
 
@@ -118,36 +120,32 @@ CLI / 手动 workflow：
 
 ### D1. Wang 2-edge → Tiled Isometric Terrain Brush tileset
 
-适合真正拿到 Tiled 的 Isometric Map 里用 Terrain Brush 刷地形。关键点：tileset 单元仍是 `target × target`（默认 `96×96`，方便在 Tileset 编辑器里框选/标记），但 `.tsx` 写入 `isometric grid = target × half_target`（默认 `96×48`）和 `tileoffset`，地图仍按 `96×48` footprint 使用。
-
+适合真正拿到 Tiled 的 Isometric Map 里用 Terrain Brush 刷地形。关键点：用 `iso45_tile_spec.preset` 一个下拉预设控制最终规格；默认 `256` 表示 tileset 单元 `256×256`，`.tsx` 写入 `isometric grid=256×128` 和 `tileoffset.y=64`。切到 `128/512` 时这些值会一起联动。
 
 ```yaml
 - action: gen_default_masks
   params: { size: 32, half_extent: 0.5 }
 - action: mask_blend_set
   params: { foreground: ${fg}, background: ${bg}, resample: nearest }
+- action: iso45_tile_spec
+  params: { preset: ${spec:256} }
 - action: for_each
   params:
     source: tiles
     steps:
-      - action: topdown_to_iso
-        params: { anchor: center, y_scale: 0.5, trim: false }
-      - action: scale
-        params: { size: [${target:96}, ${half_target:48}] }
-      - action: square_canvas
-        params: { size: ${target:96}, anchor: center }
+      - action: iso45_fit_tile
+        params: { preset: context, anchor: center, resample: bicubic }
 - action: pack_sheet
   params: { columns: 4, path: ${output:auto} }
 - action: build_tsx_sheet
   params:
     name: ${name:wang_2edge_iso_terrain}
-    grid_orientation: isometric
-    grid_width: ${target:96}
-    grid_height: ${half_target:48}
-    tileoffset_y: ${tileoffset_y:24}
+    terrain_spec: context
 ```
 
-在 Tiled 里新建地图：`Orientation=Isometric`，`Tile Width=96`，`Tile Height=48`，然后打开生成的 `.tsx` 配 Edge Set。注意：tileset 单元是 `96×96`，但 terrain overlay / map grid 是 `<grid orientation="isometric" width="96" height="48"/>`。
+在 Tiled 里新建地图：默认 `Orientation=Isometric`，`Tile Width=256`，`Tile Height=128`；如果你在下拉里选了 `128/512`，地图 Tile Width/Height 也对应改为 `N/N/2`。注意：tileset 单元是 `N×N`，但 terrain overlay / map grid 是 `<grid orientation="isometric" width="N" height="N/2"/>`。
+
+
 
 
 ### D2. Wang 2-edge 先拼完整 3×3 大图，再整体 iso 化
@@ -227,3 +225,4 @@ CLI / 手动 workflow：
 ```
 
 和内置 YAML 等价，CLI 也能直接吃同样的 JSON。在前端「★ 存为 workflow」后会自动落盘到这里，下次启动 server 时自动列在下拉里。
+

@@ -1,12 +1,14 @@
-name: wang_2edge_set_iso
+﻿name: wang_2edge_set_iso
 description: |
   Wang 2-edge tile set 的 isometric 45° 版本：和 wang_2edge_set 一样从两张
   四方连续底图（如 sand + water）+ 16 张蒙版生成过渡 tile，但每张 tile
   会被 iso 化成菱形并标准化到指定尺寸的正方形画布。
 
-  默认产物：4×4 sheet，每格 96×96 画布（菱形宽 96 高 48 居中，上下各 24px
-  透明边），对应 Tiled isometric 地图模式的 `tilewidth=96 tileheight=48`
-  约定。要换尺寸只改 ${target} 变量即可。
+  默认产物：4×4 sheet，每格 256×256 画布（菱形宽 256 高 128 居中，上下各 64px
+  透明边），对应 Tiled isometric 地图模式的 `tilewidth=256 tileheight=128`
+
+  约定。要换尺寸只改 `iso45_tile_spec.preset`（Web 下拉）或 CLI 变量 `-v spec=128/256/512`。
+
 
   适合用作：
     - iso 视角游戏的过渡素材（地面、河岸）
@@ -15,7 +17,9 @@ description: |
 
   注意：默认产物 tsx orientation 是普通方块。要用作真正的 Tiled isometric
   地图 tileset：Edit Tileset → Orientation 改为 Isometric，
-  Tile Width/Height 改为 ${target} / ${target}/2（如 96 / 48）。
+  Tile Width/Height 改为所选规格 N / N/2（默认 256 / 128）。
+
+
 
 steps:
   # ---- A. 生成几何蒙版（验证用） ----
@@ -38,41 +42,25 @@ steps:
       background: ${bg}
       resample: ${resample:nearest}
 
-  # ---- 对每张 tile 做 iso 化 + 标准化到 target × target 画布 ----
-  # 三步：
-  #   1) topdown_to_iso  trim=false 让 16 张产出形状一致（46x23 当输入是 32 时）
-  #   2) scale           按 sx=target/W 等比拉伸到 target × target/2（保持菱形 2:1）
-  #   3) square_canvas   上下补透明边到 target × target（Tiled iso 标准画布）
-  #
-  # 不直接给 scale 写 size:[w,h] 是因为 YAML flow style 里嵌 ${...} 会让
-  # 解析器误判；用 sx/sy 配合 target 变量更安全。target/half_target 由用户
-  # 显式给出（默认 96/48），互相约定 half_target == target/2。
+  # ---- 用一个下拉预设控制最终规格：cell=N×N，footprint=N×N/2 ----
+  - action: iso45_tile_spec
+    params:
+      preset: ${spec:256}
+
+  # ---- 对每张 tile 做 iso 化 + 标准化到所选规格的 cell ----
   - action: for_each
     params:
       source: tiles
       steps:
-        - action: topdown_to_iso
+        - action: iso45_fit_tile
           params:
-            anchor: center
-            angle: 45
-            y_scale: 0.5
-            resample: ${resample:bicubic}
-            trim: false
-        - action: scale
-          params:
-            size:
-              - ${target:96}
-              - ${half_target:48}
-            resample: ${resample:bicubic}
-        - action: square_canvas
-          params:
-            size: ${target:96}
-            # 菱形向下对齐：贴底部正中，上方留 ${target}-${half_target} 透明像素。
-            # 这是 iso 游戏的常规约定——菱形作为地面 footprint 居底，
-            # 上方留白给角色立绘 / 高物体（树、塔楼）伸展空间。
+            preset: context
+            # 菱形向下对齐：贴底部正中，上方留透明像素给立绘 / 高物体。
             # 想改回居中：anchor: center
             anchor: ${anchor:bottom-center}
+            resample: ${resample:bicubic}
             background: [0, 0, 0, 0]
+
 
   # ---- 拼 4×4 sheet ----
   - action: pack_sheet
@@ -92,5 +80,6 @@ steps:
       background_name: ${background_name:background}
       foreground_name: ${foreground_name:foreground}
       wang_transform: iso45_ccw
+
 
 

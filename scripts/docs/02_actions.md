@@ -23,7 +23,10 @@
 | `rotate` | `angle`, `expand`, `resample`, `background` | 任意角度旋转 |
 | `scale` | `sx`, `sy`, `factor`, `size`, `resample` | 缩放（支持非等比） |
 | `topdown_to_iso` | `anchor=bottom-center`, `angle=45`, `y_scale=0.5`, `trim` | 复合：`square + rotate + scale` |
+| `iso45_tile_spec` | `preset=96/128/256/512/custom` | 用 Web 下拉选择 iso45 最终 cell/grid/tileoffset 规格 |
+| `iso45_fit_tile` | `preset=context`, `anchor`, `resample` | Topdown tile → iso45 菱形 → 放入所选规格 cell |
 | `iso_to_topdown` | `y_scale=2.0`, `angle=-45`, `pad_before_scale`, `trim` | `topdown_to_iso` 的几何逆 |
+
 | `tile_repeat` | `cols=3`, `rows=3`, `count`, `gap`, `background` | 单图 N×M 平铺（验证循环 / 铺地预览） |
 | `make_seamless` | `method`, `overlap`, `blur_radius`, `blur_band` | 把任意图片变成四方连续（tileable） |
 

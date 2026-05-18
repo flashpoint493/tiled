@@ -10,7 +10,9 @@ from . import canvas_square  # noqa: F401
 from . import rotate         # noqa: F401
 from . import scale          # noqa: F401
 from . import topdown_to_iso  # noqa: F401
+from . import iso45_tile_spec  # noqa: F401
 from . import iso_to_topdown  # noqa: F401
+
 from . import split_3x3      # noqa: F401
 from . import save_all       # noqa: F401
 from . import for_each       # noqa: F401
