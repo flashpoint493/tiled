@@ -229,13 +229,20 @@ class BuildTsxSheetAction(Action):
         sheet_h = int(sheet["sheet_h"])
         names = sheet.get("tile_names") or []
 
-        # 解析 tsx 输出位置
+        # 解析 tsx 输出位置。
+        # - auto：跟随 sheet 同目录
+        # - 裸文件名：也跟随 sheet 同目录，方便 `path=tileset.tsx`
+        # - 带目录的相对路径：相对 pipeline workdir，避免 `output=dir/a.png`、`tsx=dir/a.tsx`
+        #   时被再次拼到 sheet.parent 下形成 `dir/dir/a.tsx`
         if not path or path == "auto":
             tsx_path = sheet_path.with_suffix(".tsx")
         else:
             tsx_path = Path(path).expanduser()
             if not tsx_path.is_absolute():
-                tsx_path = (sheet_path.parent / tsx_path).resolve()
+                if tsx_path.parent == Path("."):
+                    tsx_path = (sheet_path.parent / tsx_path).resolve()
+                else:
+                    tsx_path = (ctx.workdir / tsx_path).resolve()
         tsx_path.parent.mkdir(parents=True, exist_ok=True)
 
         # <image source=".."> 相对 tsx 所在目录
