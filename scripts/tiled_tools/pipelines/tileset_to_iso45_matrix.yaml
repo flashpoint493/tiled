@@ -1,0 +1,41 @@
+# Tileset sheet -> iso matrix 45 PNG
+#
+# 用途：地图切换到 isometric matrix 45 比例后，需要一张 tile id 顺序不变的
+# iso45 tileset PNG。这个 workflow 会逐格转换并重新拼回 sheet。
+#
+# 用法（CLI）:
+#   python -m tiled_tools run tileset_to_iso45_matrix \
+#       -v input=Tileset_06.png \
+#       -v output=Tileset_06_iso45_matrix.png \
+#       -v tile_width=256 -v tile_height=256 -v columns=16 -v spec=256
+
+name: tileset_to_iso45_matrix
+description: 将整张 tileset sheet 转成 tile id 顺序不变的 iso matrix 45 PNG
+
+steps:
+  - action: load
+    params:
+      path: ${input}
+
+  - action: tileset_to_iso45_matrix
+    params:
+      tile_width: ${tile_width:256}
+      tile_height: ${tile_height:256}
+      columns: ${columns:0}
+      tile_count: ${tile_count:0}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      output_columns: ${output_columns:0}
+      preset: ${spec:256}
+      cell_size: ${cell_size:0}
+      cell_width: ${cell_width:0}
+      cell_height: ${cell_height:0}
+      footprint_width: ${footprint_width:0}
+      footprint_height: ${footprint_height:0}
+      anchor: ${anchor:center}
+      resample: ${resample:bicubic}
+
+  - action: save
+    params:
+      path: ${output:auto}
+      format: PNG

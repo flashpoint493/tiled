@@ -1,0 +1,48 @@
+# 3x3 循环 tile → 拆 9 张 → 每张 topdown→iso → 合成 sheet → 生成 Tiled .tsx
+#
+# 跑完得到两个文件：sheet.png + sheet.tsx，可直接拖进 Tiled。
+#
+# 用法（web）: 上传 → 选 workflow → ▶ 运行
+# 用法（CLI）: python -m tiled_tools run 3x3_split_then_iso_sheet \
+#                -v input=res/grass.png -v name=grass_iso
+
+name: 3x3_split_then_iso_sheet
+description: 3x3 循环 tile 全流程到 Tiled sheet tsx
+
+steps:
+  - action: load
+    params:
+      path: ${input}
+
+  - action: split_3x3
+    params:
+      mode: equal
+
+  # 把 9 张都做 topdown→iso；trim=false 保证 9 张尺寸一致，pack_sheet 时无需 pad
+  - action: for_each
+    params:
+      source: tiles
+      steps:
+        - action: topdown_to_iso
+          params:
+            anchor: center
+            angle: 45
+            y_scale: 0.5
+            resample: bicubic
+            trim: false
+
+  # 9 张拼成 3x3 sheet；spacing/margin 可按需调
+  - action: pack_sheet
+    params:
+      path: ${sheet_name:sheet}.png
+      columns: 3
+      spacing: 0
+      margin: 0
+      pad_anchor: center
+
+  # 生成 Tiled 可识别的 .tsx，tile_names=true 会把 NW/N/NE... 写成 tile 属性
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:grass_iso}
+      tile_names: true

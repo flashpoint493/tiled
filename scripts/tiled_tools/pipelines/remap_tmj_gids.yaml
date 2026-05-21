@@ -1,0 +1,17 @@
+name: remap_tmj_gids
+description: |
+  使用 brush_variants_remap_tsx 生成的 .remap.json 后处理 Tiled JSON 地图，
+  把来自 brush tileset 的 GID 替换成原始 runtime tileset 的 GID，并可移除
+  brush tileset 引用。
+
+steps:
+  - action: remap_tmj_gids
+    params:
+      map_path: ${map_path}
+      mapping_json: ${mapping_json}
+      output: ${output:auto}
+      brush_tileset_name: ${brush_tileset_name:}
+      source_tileset_name: ${source_tileset_name:}
+      source_firstgid: ${source_firstgid:0}
+      remove_brush_tileset: ${remove_brush_tileset:true}
+      indent: ${indent:2}

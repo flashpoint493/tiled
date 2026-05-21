@@ -1,0 +1,24 @@
+name: tilesheet_split_connected
+description: |
+  从一张透明背景 tilesheet 中自动识别彼此分离的非透明贴图，
+  按从上到下、从左到右裁成多张独立 PNG。
+
+steps:
+  - action: load
+    params:
+      path: ${input}
+
+  - action: split_connected
+    params:
+      min_alpha: ${min_alpha:1}
+      min_width: ${min_width:1}
+      min_height: ${min_height:1}
+      padding: ${padding:0}
+      connectivity: ${connectivity:8}
+      sort: ${sort:row-major}
+
+  - action: save_all
+    params:
+      dir: ${output_dir:auto}
+      prefix: ${prefix:}
+      pattern: "{prefix}_{name}.png"

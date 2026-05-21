@@ -5,7 +5,7 @@
 
 参数
 ----
-- dir       : 输出目录。绝对路径直接用；相对路径 web 模式下走 .web_runtime/outputs。
+- dir       : 输出目录。绝对路径直接用；相对路径 web 模式下走当前工作目录的运行时 outputs。
               CLI 模式下相对 cwd。默认 None = 直接放到 ctx.workdir。
 - prefix    : 文件名前缀。例如 prefix="grass" 会得到 grass_NW.png 等。
               默认空 = 用 source_path.stem 当前缀；都没有就用 "tile"。

@@ -47,7 +47,7 @@ class LoadDirAction(Action):
         if not d.is_dir():
             raise FileNotFoundError(f"[load_dir] 目录不存在: {d}")
 
-        files = list(d.glob(pattern))
+        files = [p for p in d.glob(pattern) if p.is_file()]
         if sort:
             files.sort(key=lambda p: p.name)
         if limit and limit > 0:

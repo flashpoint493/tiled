@@ -9,6 +9,7 @@
 | 场景 | 推荐 |
 | --- | --- |
 | 一张源图，要切成 9 张 / 16 张 tile | **工具链**（手工切麻烦且容易像素错位） |
+| 一张透明背景 tilesheet 里散排了多张 sprite，要裁成独立 PNG | **工具链**（`split_connected` / `tilesheet_split_connected`） |
 | topdown 视角贴图转 iso 45°（菱形） | **工具链** |
 | 多张同尺寸 tile 拼成 sprite sheet | **工具链** |
 | 批量对一组 tile 做相同处理（旋转、缩放、iso） | **工具链** |
@@ -35,7 +36,7 @@ python -m tiled_tools serve --port 8765
 - 中：当前 pipeline（拖拽排序）
 - 右：原图 / 产物预览 + 日志
 
-顶栏 workflow 下拉里有 12 个内置 workflow（见下文表格），开箱即用；顶栏「批量导入」可一次选择多张图片并自动生成 sheet + `.tsx`。
+顶栏 workflow 下拉里有 17 个内置 workflow（见下文表格），开箱即用；顶栏「批量导入」可一次选择多张图片并自动生成 sheet + `.tsx`。
 
 
 
@@ -67,6 +68,7 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 | `3x3_split_then_iso` | 3x3 循环 tile → 切 9 张 → 每张 iso → 散文件 | 9 PNG |
 | `3x3_split_then_iso_sheet` | 同上 + 拼 sprite sheet + 生成 Tiled `.tsx` | 1 PNG + 1 TSX |
 | `tile_repeat_3x3` | 单张贴图按 3×3 平铺成大图（验证循环 / 铺地预览） | 1 PNG |
+| `tilesheet_split_connected` | 一张透明背景 tilesheet → 按 alpha 连通区域自动裁成多张独立 PNG | 多张 PNG |
 | `batch_images_to_tilesheet` | 多张独立图片 / 一个目录 → 拼成单张 tilesheet + `.tsx`（Web 顶栏「批量导入」会自动走这条链路） | 1 PNG + 1 TSX |
 | `wang_2edge_set` | 两张底图（foreground/background）→ 16 张过渡 tile + sheet + .tsx（沙↔水 等 edge-style 过渡素材） | 1 PNG + 1 TSX |
 | `wang_2edge_corner_set` | 两张底图 → 非 iso 的 32 格 sheet + .tsx；前 16 格 edge、后 16 格 corner，并自动写两个 wangset | 1 PNG + 1 TSX |
@@ -88,7 +90,7 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 
 **最常用是第三个**——一条命令把 auto-tile 素材完全做成 Tiled 可打开的形态。
 
-## Action 速查（18 个）
+## Action 速查（23 个）
 
 
 | Action | 输入 | 输出 | 主要参数 |
@@ -106,6 +108,7 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 | `iso_to_topdown` | `ctx.image` | 反推回 topdown 的图 | `y_scale=2.0`, `angle=-45`, `pad_before_scale`, `trim`（`topdown_to_iso` 的几何逆） |
 
 | `split_3x3` | `ctx.image` | 9 张 tiles + tile_names | `mode=equal/border`, `border` |
+| `split_connected` | 透明背景 `ctx.image` | 多张 tiles + `001/002/...` tile_names | `min_alpha`, `min_width`, `min_height`, `padding`, `connectivity`, `sort` |
 | `for_each` | `ctx.extras["tiles"]` | 批量处理后的 tiles | `source`, `steps`（子 pipeline） |
 | `pack_sheet` | `ctx.extras["tiles"]` | sprite sheet PNG + sheet 元数据 | `columns`, `spacing`, `margin`, `tile_w`, `tile_h`, `pad_anchor` |
 | `build_tsx_sheet` | `ctx.extras["sheet"]` | Tiled `.tsx` | `name`, `tile_names`（是否写 NW/N/... 命名属性） |
@@ -123,8 +126,8 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 ### Context 通道（设计核心）
 
 - `ctx.image`：单图通道。`load` 写入，`save` / `square_canvas` / `rotate` / `scale` / `topdown_to_iso` 读写。
-- `ctx.extras["tiles"]`：多图通道。`split_3x3` 写入 9 张，`for_each` 读写（批量改写），`save_all` / `pack_sheet` 消费。
-- `ctx.extras["tile_names"]`：与 tiles 平行的名字列表。`split_3x3` 写 `[NW,N,NE,W,C,E,SW,S,SE]`，一路透传到 `build_tsx_sheet` 写成 tile 的 `name` 属性。
+- `ctx.extras["tiles"]`：多图通道。`split_3x3` 写入 9 张，`split_connected` 写入透明 sheet 里识别到的多张贴图，`for_each` 读写（批量改写），`save_all` / `pack_sheet` 消费。
+- `ctx.extras["tile_names"]`：与 tiles 平行的名字列表。`split_3x3` 写 `[NW,N,NE,W,C,E,SW,S,SE]` 这类方位名，`split_connected` 写 `001/002/...`，一路透传到 `build_tsx_sheet` 写成 tile 的 `name` 属性。
 - `ctx.extras["sheet"]`：`pack_sheet` 写入的 sheet 规格（path / tile_w / tile_h / columns / rows / spacing / margin / tile_count），`build_tsx_sheet` 消费。
 
 ## 常见 pipeline 配方
@@ -245,6 +248,30 @@ steps:
 **注意**：默认 tsx orientation 是普通方块。要用作真正的 Tiled isometric
 地图 tileset，优先使用 `wang_2edge_set_iso_terrain`，它会自动写入 isometric grid / tileoffset。
 
+
+### 配方 B0：透明 tilesheet → 多张独立 PNG
+
+用于一张透明背景大图里散排多个 sprite / item / decoration，需要按非透明连通区域自动裁出独立贴图。
+
+```yaml
+steps:
+  - { action: load, params: { path: ${input} } }
+  - action: split_connected
+    params:
+      min_alpha: 1          # alpha >= 1 视为有效像素
+      min_width: 1          # 可调大以过滤小噪点
+      min_height: 1
+      padding: 0            # 每张裁剪结果额外保留透明边
+      connectivity: 8       # 8=斜角接触也算同一张；4=只算上下左右
+      sort: row-major       # 从上到下、从左到右命名 001/002/...
+  - action: save_all
+    params:
+      dir: ${output_dir:auto}
+      prefix: ${prefix:}
+      pattern: "{prefix}_{name}.png"
+```
+
+若两个 sprite 的非透明像素接触或重叠，会被识别为同一张；需要美术图里留透明间隔。
 
 ### 配方 B：3x3 循环 tile → 9 张散文件
 

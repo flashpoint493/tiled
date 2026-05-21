@@ -26,6 +26,7 @@ import sys
 import time
 import traceback
 import uuid
+import zipfile
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -49,21 +50,19 @@ from .core.registry import _REGISTRY  # type: ignore[attr-defined]
 
 
 # ---------- 路径约定 ----------
-# server.py 在 scripts/tiled_tools/server.py
-# scripts/                 = 项目根
-#   ├── web/               = 前端静态资源
-#   ├── .web_runtime/      = 运行期文件（uploads / outputs）
-SCRIPTS_ROOT = Path(__file__).resolve().parent.parent
-WEB_DIR = SCRIPTS_ROOT / "web"
-RUNTIME_DIR = SCRIPTS_ROOT / ".web_runtime"
+# 包内只放可分发的只读资源；用户数据和运行期产物写到当前工作目录。
+PACKAGE_ROOT = Path(__file__).resolve().parent
+PROJECT_DIR = Path.cwd().resolve()
+WEB_DIR = PACKAGE_ROOT / "web"
+RUNTIME_DIR = PROJECT_DIR / ".tiled_tools_runtime"
 UPLOAD_DIR = RUNTIME_DIR / "uploads"
 OUTPUT_DIR = RUNTIME_DIR / "outputs"
 # 用户编辑/保存的 workflow（前端写）
-WORKFLOWS_DIR = SCRIPTS_ROOT / "workflows"
-# 仓库自带的 YAML pipeline（手写、只读）
-PIPELINES_DIR = SCRIPTS_ROOT / "pipelines"
+WORKFLOWS_DIR = PROJECT_DIR / "workflows"
+# 包内自带的 YAML pipeline（手写、只读）
+PIPELINES_DIR = PACKAGE_ROOT / "pipelines"
 # 教程 markdown，前端「📖 帮助」按钮渲染
-DOCS_DIR = SCRIPTS_ROOT / "docs"
+DOCS_DIR = PACKAGE_ROOT / "docs"
 
 
 def _ensure_dirs() -> None:
@@ -122,6 +121,56 @@ def _resolve_file_id(file_id: str) -> Path:
     raise HTTPException(404, f"找不到文件: {file_id}")
 
 
+def _unique_zip_name(name: str, used: set[str]) -> str:
+    base = Path(name).name or "file"
+    if base not in used:
+        used.add(base)
+        return base
+    stem = Path(base).stem or "file"
+    suffix = Path(base).suffix
+    i = 2
+    while True:
+        candidate = f"{stem}_{i}{suffix}"
+        if candidate not in used:
+            used.add(candidate)
+            return candidate
+        i += 1
+
+
+def _create_outputs_zip(outputs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """把本次运行产生的可解析 file_id 打包成 zip，并返回下载元数据。"""
+    files: List[tuple[Path, str]] = []
+    used_names: set[str] = set()
+    for item in outputs:
+        fid = item.get("file_id")
+        if not fid:
+            continue
+        try:
+            p = _resolve_file_id(str(fid))
+        except HTTPException:
+            continue
+        arcname = _unique_zip_name(p.name, used_names)
+        files.append((p, arcname))
+
+    if len(files) <= 1:
+        return None
+
+    zip_id = _new_id("out", ".zip")
+    zip_path = OUTPUT_DIR / zip_id
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for p, arcname in files:
+            zf.write(p, arcname=arcname)
+
+    return {
+        "file_id": zip_id,
+        "url": f"/api/file/{zip_id}",
+        "label": "download_all",
+        "name": "全部产物.zip",
+        "count": len(files),
+        "size_bytes": zip_path.stat().st_size,
+    }
+
+
 # ---------- API models ----------
 
 class StepModel(BaseModel):
@@ -142,7 +191,8 @@ def create_app() -> FastAPI:
 
     # 启动日志：让人一眼看到当前进程加载的是哪份代码、哪些 action。
     # 改完代码不重启 uvicorn 是最常见的"修了 bug 还在报错"陷阱。
-    print(f"[server] tiled_tools loaded from: {SCRIPTS_ROOT}")
+    print(f"[server] tiled_tools package: {PACKAGE_ROOT}")
+    print(f"[server] project dir: {PROJECT_DIR}")
     print(f"[server] runtime dir: {RUNTIME_DIR}")
     print(f"[server] registered actions: {available_actions()}")
 
@@ -170,7 +220,7 @@ def create_app() -> FastAPI:
         suffix = _check_image_suffix(file.filename)
         file_id = _new_id("up", suffix)
         dest = UPLOAD_DIR / file_id
-        # 防御：进程跑着时如果有人删了 .web_runtime/，下次上传会 FileNotFoundError。
+        # 防御：进程跑着时如果有人删了运行时目录，下次上传会 FileNotFoundError。
         # 这里再保险一次，开销可忽略。
         dest.parent.mkdir(parents=True, exist_ok=True)
         data = await file.read()
@@ -232,7 +282,7 @@ def create_app() -> FastAPI:
         - 字符串里的 ${var:default} 占位符在预处理前先解析一遍，让上面这些
           "auto / 文件路径" 的判断能稳定工作。
         """
-        # 进程运行期间用户可能手动删了 .web_runtime/，每次跑都重新确保目录在
+        # 进程运行期间用户可能手动删了运行时目录，每次跑都重新确保目录在
         _ensure_dirs()
 
         # 0) 先做一遍变量替换：把 ${output:auto} 这类提前展开成 "auto"，
@@ -358,6 +408,79 @@ def create_app() -> FastAPI:
                         "name": "tsx",
                     })
 
+            elif action_name == "brush_remap_tsx":
+                # source / brush 都是输入图片；tsx / mapping_json 是同目录产物。
+                for k in ("source", "brush"):
+                    if k in params and params[k]:
+                        params[k] = _materialize_input_path(params[k])
+
+                raw_tsx = params.get("tsx")
+                raw_json = params.get("mapping_json")
+                out_dir = OUTPUT_DIR / f"brush_remap_{uuid.uuid4().hex[:8]}"
+                out_dir.mkdir(parents=True, exist_ok=True)
+                base = _safe_upload_stem(str(params.get("name") or "brush_remap"), "brush_remap")
+
+                if not raw_tsx or raw_tsx == "auto":
+                    tsx_fname = f"{base}.tsx"
+                    tsx_out = out_dir / tsx_fname
+                else:
+                    tsx_fname = Path(raw_tsx).name or f"{base}.tsx"
+                    if not tsx_fname.lower().endswith(".tsx"):
+                        tsx_fname += ".tsx"
+                    tsx_out = out_dir / tsx_fname
+                params["tsx"] = str(tsx_out)
+                produced_outputs.append({
+                    "file_id": f"{out_dir.name}/{tsx_out.name}",
+                    "label": "brush_remap_tsx",
+                    "name": "tsx",
+                })
+
+                if not raw_json or raw_json == "auto":
+                    json_fname = f"{Path(tsx_out.name).stem}.remap.json"
+                    json_out = out_dir / json_fname
+                else:
+                    json_fname = Path(raw_json).name or f"{Path(tsx_out.name).stem}.remap.json"
+                    if not json_fname.lower().endswith(".json"):
+                        json_fname += ".json"
+                    json_out = out_dir / json_fname
+                params["mapping_json"] = str(json_out)
+                produced_outputs.append({
+                    "file_id": f"{out_dir.name}/{json_out.name}",
+                    "label": "brush_remap_tsx",
+                    "name": "remap_json",
+                })
+
+                if params.get("copy_brush_image", True):
+                    brush_name = Path(str(params.get("brush") or "brush.png")).name
+                    produced_outputs.append({
+                        "file_id": f"{out_dir.name}/{brush_name}",
+                        "label": "brush_remap_tsx",
+                        "name": "brush_image",
+                    })
+
+            elif action_name == "remap_tmj_gids":
+                for k in ("map_path", "mapping_json"):
+                    if k in params and params[k]:
+                        params[k] = _materialize_input_path(params[k])
+
+                raw = params.get("output")
+                map_suffix = Path(str(params.get("map_path") or "")).suffix.lower()
+                out_suffix = ".tmx" if map_suffix == ".tmx" else ".tmj"
+                out_id = _new_id("out", out_suffix)
+                if not raw or raw == "auto":
+                    out_path = OUTPUT_DIR / out_id
+                else:
+                    out_path = _materialize_output_path(raw)
+                    if out_path.suffix.lower() not in (".tmj", ".json", ".tmx"):
+                        out_path = out_path.with_suffix(out_suffix)
+                params["output"] = str(out_path)
+                produced_outputs.append({
+                    "file_id": out_path.name if out_path.parent == OUTPUT_DIR else "",
+                    "label": "remap_tmj_gids",
+                    "name": "runtime_map",
+                    "path": str(out_path),
+                })
+
             steps_dict.append({"action": action_name, "params": params})
 
         # 2) 执行，并捕获 stdout（变量已在第 0 步替换过，这里 variables 传空）
@@ -391,11 +514,13 @@ def create_app() -> FastAPI:
                     "name": p.stem,
                 })
 
-        # 4) 给每个产物补 url
+        # 4) 给每个产物补 url，并额外生成本次运行的 zip 下载包
         for o in produced_outputs:
             fid = o.get("file_id")
             if fid:
                 o["url"] = f"/api/file/{fid}"
+
+        archive = _create_outputs_zip(produced_outputs) if ok else None
 
         return JSONResponse({
             "ok": ok,
@@ -403,6 +528,7 @@ def create_app() -> FastAPI:
             "log": log_buf.getvalue(),
             "error": err,
             "outputs": produced_outputs,
+            "archive": archive,
         })
 
     # ---- 前端静态资源 ----
@@ -449,13 +575,14 @@ def create_app() -> FastAPI:
 
 # ---------- 路径工具 ----------
 
+_UPLOAD_SUFFIXES = (".png", ".webp", ".jpg", ".jpeg", ".bmp", ".tga", ".json", ".tmj", ".tsx")
 _IMAGE_SUFFIXES = (".png", ".webp", ".jpg", ".jpeg", ".bmp", ".tga")
 
 
 def _check_image_suffix(filename: Optional[str]) -> str:
     suffix = Path(filename or "").suffix.lower() or ".png"
-    if suffix not in _IMAGE_SUFFIXES:
-        raise HTTPException(400, f"不支持的图片格式: {suffix}")
+    if suffix not in _UPLOAD_SUFFIXES:
+        raise HTTPException(400, f"不支持的文件格式: {suffix}")
     return suffix
 
 
@@ -706,6 +833,20 @@ def _register_docs_routes(app: FastAPI) -> None:
             "filename": p.name,
             "content": content,   # raw markdown，前端自己渲染
         }
+
+    @app.get("/docs-assets/{rel:path}")
+    def get_doc_asset(rel: str):
+        """Serve images and downloadable artifacts referenced by bundled docs."""
+        if "\\" in rel or ".." in rel.split("/"):
+            raise HTTPException(400, "非法路径")
+        p = (DOCS_DIR / rel).resolve()
+        try:
+            p.relative_to(DOCS_DIR.resolve())
+        except ValueError:
+            raise HTTPException(400, "非法路径")
+        if not p.is_file():
+            raise HTTPException(404, f"找不到文档资源: {rel}")
+        return FileResponse(p)
 
 
 def main(host: str = "127.0.0.1", port: int = 8765, reload: bool = False) -> None:

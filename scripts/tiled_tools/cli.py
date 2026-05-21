@@ -7,8 +7,8 @@
   do <action> [--k v ...]  跑单个 action（快速验证用）
 
 例子：
-  # 跑 pipeline
-  python -m tiled_tools.cli run pipelines/topdown_to_iso.yaml \
+  # 跑内置 pipeline
+  python -m tiled_tools.cli run topdown_to_iso \
       -v input=res/grass.png -v output=output/grass_iso.png
 
   # 单独跑一个 action 链：load + topdown_to_iso + save
@@ -47,10 +47,22 @@ def cmd_list(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_pipeline_path(raw: str) -> Path:
+    p = Path(raw).expanduser()
+    candidates = [p]
+    package_pipelines = Path(__file__).resolve().parent / "pipelines"
+    candidates.append(package_pipelines / raw)
+    if p.suffix.lower() not in (".yaml", ".yml"):
+        candidates.append(package_pipelines / f"{raw}.yaml")
+    for cand in candidates:
+        resolved = cand.resolve()
+        if resolved.is_file():
+            return resolved
+    raise SystemExit(f"找不到 pipeline: {raw}")
+
+
 def cmd_run(args: argparse.Namespace) -> int:
-    pipeline_path = Path(args.pipeline).resolve()
-    if not pipeline_path.is_file():
-        raise SystemExit(f"找不到 pipeline: {pipeline_path}")
+    pipeline_path = _resolve_pipeline_path(args.pipeline)
     pipeline = Pipeline.from_yaml(pipeline_path)
     variables = _parse_kv(args.var or [])
     print(f"== 运行 pipeline: {pipeline.name} ==")
@@ -62,7 +74,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_quick_iso(args: argparse.Namespace) -> int:
-    """便捷子命令：一条龙做 topdown -> iso。等价于跑 pipelines/topdown_to_iso.yaml"""
+    """便捷子命令：一条龙做 topdown -> iso。"""
     pipeline = Pipeline.from_dict({
         "name": "quick_iso",
         "steps": [

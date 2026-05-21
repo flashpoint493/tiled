@@ -14,6 +14,7 @@ from . import iso45_tile_spec  # noqa: F401
 from . import iso_to_topdown  # noqa: F401
 
 from . import split_3x3      # noqa: F401
+from . import split_connected  # noqa: F401
 from . import save_all       # noqa: F401
 from . import for_each       # noqa: F401
 from . import pack_sheet     # noqa: F401
@@ -24,4 +25,11 @@ from . import load_dir      # noqa: F401
 from . import mask_blend_set  # noqa: F401
 from . import make_seamless  # noqa: F401
 from . import wang_2edge_compose_map  # noqa: F401
+from . import brush_remap_tsx  # noqa: F401
+from . import remap_tmj_gids  # noqa: F401
+from . import tileset_to_iso45_matrix  # noqa: F401
+
+
+
+
 

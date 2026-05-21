@@ -1,0 +1,22 @@
+name: brush_variants_remap_tsx
+description: |
+  读取原始 runtime tileset 与更大的 brush variants tileset，按每个 256×256 tile
+  的主色建立映射，生成一个可在 Tiled 中编辑用的 brush .tsx，并同时输出
+  .remap.json，供导出地图后的 GID 替换脚本使用。
+
+steps:
+  - action: brush_remap_tsx
+    params:
+      source: ${source}
+      brush: ${brush}
+      tsx: ${tsx:auto}
+      mapping_json: ${mapping_json:auto}
+      name: ${name:brush_variants_remap}
+      source_name: ${source_name:Tileset_06}
+      tile_width: ${tile_width:256}
+      tile_height: ${tile_height:256}
+      firstgid: ${firstgid:1}
+      min_alpha: ${min_alpha:1}
+      ambiguous: ${ambiguous:first}
+      include_empty_tiles: ${include_empty_tiles:false}
+      copy_brush_image: ${copy_brush_image:true}

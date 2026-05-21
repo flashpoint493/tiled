@@ -1,0 +1,39 @@
+# Topdown 贴图 -> Isometric 45° 视角
+#
+# 用法:
+#   python -m tiled_tools run topdown_to_iso \
+#       -v input=path/to/topdown.png \
+#       -v output=path/to/iso.png
+#
+# 也可以拆开走原子步骤，便于调参（注释里那一段）：
+
+name: topdown_to_iso
+description: 将 topdown 贴图转换为 iso 45° 视角
+
+steps:
+  - action: load
+    params:
+      # web 端会被前端自动替换成上传的 file_id；CLI 用 -v input=...
+      path: ${input}
+
+  # ---- 复合写法（推荐）：一行搞定 ----
+  - action: topdown_to_iso
+    params:
+      anchor: bottom-center   # 角色/物件站立类。地面 tile 推荐改为 "center"
+      angle: 45
+      y_scale: 0.5            # 标准 2:1 dimetric。真 60° iso 用 0.5774
+      resample: bicubic       # 像素风改成 nearest
+      trim: true
+
+  # ---- 等价的原子写法（取消注释、并删掉上面那个 topdown_to_iso 即可）----
+  # - action: square_canvas
+  #   params: { anchor: bottom-center }
+  # - action: rotate
+  #   params: { angle: 45, expand: true, resample: bicubic }
+  # - action: scale
+  #   params: { sy: 0.5, resample: bicubic }
+
+  - action: save
+    params:
+      # 默认 "auto"：web 端会让 server 自动分配 file_id；CLI 用 -v output=...
+      path: ${output:auto}

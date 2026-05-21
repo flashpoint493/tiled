@@ -6,27 +6,34 @@
 
 ```
 scripts/
-├── tiled_tools/            # 核心包：Action + Pipeline 架构
+├── pyproject.toml          # 独立 Python 包配置
+├── requirements.txt        # 开发期依赖列表
+├── tiled_tools/            # 核心包：Action + Pipeline + Web UI
 │   ├── core/               #   Action 基类 / Context / Pipeline / 注册表
 │   ├── actions/            #   一个文件一个 action
+│   ├── docs/               #   Web 帮助文档（随包分发）
+│   ├── pipelines/          #   内置 YAML workflow（随包分发，只读）
+│   ├── web/                #   单页前端（随包分发，无构建）
 │   └── server.py           #   FastAPI 后端（web 模式）
-├── pipelines/              # 现成的 YAML workflow
-│   └── topdown_to_iso.yaml
-├── web/                    # 单页前端（无构建）
-│   ├── index.html
-│   ├── styles.css
-│   └── app.js
 ├── split_icons.py          # 旧脚本：从总览图拆图标（仍可用）
 ├── build_tsx.py            # 旧脚本：把目录组装成 .tsx（仍可用）
-├── res/                    # 输入素材
-├── output/                 # 产物输出（CLI 用）
-└── .web_runtime/           # web 模式的 uploads/outputs（gitignore）
+├── res/                    # 本仓库示例输入素材
+├── output/                 # 本仓库示例产物输出（gitignore）
+└── .tiled_tools_runtime/   # web 模式 uploads/outputs（运行时自动创建，gitignore）
 ```
 
 > 旧脚本 `split_icons.py` / `build_tsx.py` 保留是为了向后兼容；新功能请走
 > `tiled_tools` 包，它们后续会被改造成对应 action 的薄包装。
 
 ## 安装
+
+开发安装（推荐，直接在本目录调试）：
+
+```bash
+pip install -e .
+```
+
+或仅安装依赖后用源码运行：
 
 ```bash
 pip install -r requirements.txt
@@ -95,9 +102,9 @@ python -m tiled_tools serve --port 8765
 - 右侧：原图预览 / 产物预览（多张时自动 3x3 网格） / 执行日志。
 
 顶栏支持 **workflow** 持久化：
-- 下拉条：列出已保存的 user workflow 和内置的 builtin（`pipelines/*.yaml`）。
+- 下拉条：列出已保存的 user workflow 和内置的 builtin（包内 `tiled_tools/pipelines/*.yaml`）。
 - 选择即加载到中间面板；可直接修改后再次保存（同名覆盖）。
-- 「★ 存为 workflow」会问你 id（落盘文件名）和显示名，存到 `scripts/workflows/<id>.json`。
+- 「★ 存为 workflow」会问你 id（落盘文件名）和显示名，存到当前工作目录的 `workflows/<id>.json`。
 - 「🗑」删除当前选中的 user workflow（builtin 不能删）。
 
 操作：
@@ -205,7 +212,7 @@ python -m tiled_tools quick-iso input.png output.png \
 走 YAML：
 
 ```bash
-python -m tiled_tools run pipelines/topdown_to_iso.yaml \
+python -m tiled_tools run topdown_to_iso \
     -v input=res/grass_topdown.png \
     -v output=output/grass_iso.png
 ```
@@ -231,7 +238,7 @@ python -m tiled_tools quick-topdown iso_input.png topdown_out.png \
     --pad 16                  # 输入紧贴画布边时加点 padding，避免角被裁
 ```
 
-走 YAML：`pipelines/iso_to_topdown.yaml`，web 端下拉里也能直接选到。
+走内置 workflow：`iso_to_topdown`，web 端下拉里也能直接选到。
 
 闭环验证（topdown → iso → topdown）已经在测试里跑通：128×128 输入经过一次往返
 回到 132×132（正方形误差 0），主要色块和方向都保留。
@@ -245,7 +252,7 @@ python -m tiled_tools quick-topdown iso_input.png topdown_out.png \
 2. **给美术做"铺地"成品预览**：一张地面 tile 拼 5×5，直接看大块效果。
 
 ```bash
-python -m tiled_tools run pipelines/tile_repeat_3x3.yaml \
+python -m tiled_tools run tile_repeat_3x3 \
     -v input=res/grass.png -v output=output/grass_3x3.png
 ```
 
@@ -267,7 +274,7 @@ Tiled Edge Set 绑定步骤详见 web 端 **📖 帮助 → Wang 2-edge 专题**
 最简形态：
 
 ```bash
-python -m tiled_tools run pipelines/wang_2edge_set.yaml \
+python -m tiled_tools run wang_2edge_set \
     -v fg=sand_tile.png \
     -v bg=water_tile.png \
     -v name=wang_sand_water
