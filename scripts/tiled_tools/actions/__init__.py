@@ -23,6 +23,7 @@ from . import tile_repeat    # noqa: F401
 from . import gen_default_masks  # noqa: F401
 from . import load_dir      # noqa: F401
 from . import mask_blend_set  # noqa: F401
+from . import multi_terrain_wang_set  # noqa: F401
 from . import make_seamless  # noqa: F401
 from . import wang_2edge_compose_map  # noqa: F401
 from . import brush_remap_tsx  # noqa: F401

@@ -289,6 +289,101 @@ python -m tiled_tools run wang_2edge_corner_set_iso_terrain \
 默认产物是 `2048×1024` sheet（8×4，每格 `256×256`），内部 grid 仍是 `256×128`；同样可通过 `iso45_tile_spec.preset` 下拉或 `-v spec=128/512` 改规格。打开 `.tsx` 后 Terrain Sets 面板里会同时有 Edge Set 和 Corner Set，不需要在透明 cell 上手工标边。
 
 
+## 3 种甚至更多 terrain：`multi_tiletype_corner_set`
+
+上面的 `wang_2edge_set` / `wang_2edge_corner_set` 本质上都是**二地形**规则：
+
+- 每条边只有 `foreground / background` 两种取值
+- 每个角只有 `foreground / background` 两种取值
+- 所以 edge 是 `2^4 = 16`，corner 也是 `2^4 = 16`
+
+一旦你要做 `grass / sand / water` 这种 **3 种 terrain 混合**，或者更多类型，继续按“成对生成多个二地形 tileset”会遇到两个问题：
+
+- **规则不统一**：`grass↔sand`、`sand↔water`、`grass↔water` 分散在多个 tileset，地图上不好一起刷
+- **三岔/四岔交汇缺失**：成对过渡只能表达 A/B，不能在同一 tile 上同时表达 A/B/C
+
+为此新增了 `multi_tiletype_corner_set` workflow：
+
+```text
+load_dir(读取基础 terrain 目录)
+→ multi_terrain_wang_set(mode=both)
+→ pack_sheet
+→ build_tsx_sheet
+```
+
+它的核心思路是：
+
+- 目录里的每张基础循环贴图代表一种 terrain
+- 直接生成一个**单一的多 terrain wangset**，而不是拆成多个二地形 tileset
+- 对于 N 种 terrain：
+  - Edge Set 数量 = `N^4`
+  - Corner Set 数量 = `N^4`
+  - 两者一起 = `2 * N^4`
+
+例如：
+
+| terrain 数 | edge | corner | 总数 |
+| --- | ---: | ---: | ---: |
+| 3 | 81 | 81 | 162 |
+| 4 | 256 | 256 | 512 |
+| 5 | 625 | 625 | 1250 |
+
+### 什么时候适合用它
+
+- 你确实需要在**同一个 tileset / 同一个 terrain set**里支持 3 种以上材料混刷
+- 你的基础素材都是四方连续贴图，允许通过程序化混合来生成边界
+- 你能接受“大量组合 tile”带来的 sheet 体积增长
+
+### 什么时候不要硬上
+
+- 如果只是 `sand → shallow → deep` 的分层海岸，而且实际不会在同一格里出现三向交汇，**多个二地形 tileset 仍然更轻量**
+- 如果某些三岔路口需要**高度定制的手工美术形状**，程序化混合只能作为起稿，不会完全替代手绘
+- 当 terrain 超过 4 种时，通常更建议按主题拆成多个 tileset，否则 sheet 会非常大
+
+### 输入约定
+
+把基础 terrain 图放进一个目录，按文件名排序作为 terrain 顺序，例如：
+
+```text
+terrains/
+├── 01_grass.png
+├── 02_sand.png
+└── 03_water.png
+```
+
+默认：
+
+- 文件 stem 会作为 terrain 名称写进 `.tsx`
+- 颜色会自动分配；如果需要更准确的名称/颜色，可后续继续扩展 action 参数
+
+### 命令行
+
+```bash
+python -m tiled_tools run multi_tiletype_corner_set \
+    -v terrain_dir=terrains \
+    -v name=grass_sand_water \
+    -v columns=18
+```
+
+### Web 端
+
+1. 先用顶栏 **批量导入** 把多张基础 terrain 图上传到同一个目录
+2. 选择 workflow：`multi_tiletype_corner_set`
+3. 把第一步 `load_dir.path` 改成批量导入得到的目录 id（如 `batch_ab12cd34`）
+4. ▶ 运行，下载生成的 `sheet.png` 与 `.tsx`
+
+### 结果解释
+
+生成的 `.tsx` 里会有：
+
+- 一个多 terrain 的 `edge_set`
+- 一个多 terrain 的 `corner_set`
+- 每个 `<wangcolor>` 对应一种 terrain（不再是只有 background / foreground 两种）
+- 每个 `<wangtile>` 的 `wangid` 会直接写 4 个位置各自属于哪一种 terrain
+
+也就是说，**这不是 Mixed Set 的 8 位置建模**，而是把现有 Edge Set / Corner Set 从“二值”推广到了“多值”。这正适合探索 3 种甚至更多 tile 类型共存时的规则集 workflow。
+
+
 ## 整张 3×3 大图整体 iso 化：`wang_2edge_big_iso`
 
 

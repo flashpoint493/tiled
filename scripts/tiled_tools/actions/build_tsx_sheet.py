@@ -126,6 +126,37 @@ def _wang_2corner_id(code: int, background: int = 1, foreground: int = 2) -> str
     return f"0,{tr},0,{br},0,{bl},0,{tl}"
 
 
+def _transform_edge_labels(labels: list[int], transform: str) -> list[int]:
+    transform = (transform or "none").lower()
+    if transform in ("", "none"):
+        return list(labels)
+    if transform in ("iso45", "iso45_ccw"):
+        return [labels[1], labels[2], labels[3], labels[0]]
+    if transform == "opposite":
+        return [labels[2], labels[3], labels[0], labels[1]]
+    raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
+
+
+def _transform_corner_labels(labels: list[int], transform: str) -> list[int]:
+    transform = (transform or "none").lower()
+    if transform in ("", "none"):
+        return list(labels)
+    if transform in ("iso45", "iso45_ccw"):
+        return [labels[1], labels[2], labels[3], labels[0]]
+    if transform == "opposite":
+        return [labels[2], labels[3], labels[0], labels[1]]
+    raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
+
+
+def _wang_edge_labels_id(labels: list[int]) -> str:
+    top, right, bottom, left = [int(x) + 1 for x in labels]
+    return f"{top},0,{right},0,{bottom},0,{left},0"
+
+
+def _wang_corner_labels_id(labels: list[int]) -> str:
+    tl, tr, br, bl = [int(x) + 1 for x in labels]
+    return f"0,{tr},0,{br},0,{bl},0,{tl}"
+
 
 @register("build_tsx_sheet")
 
@@ -282,54 +313,91 @@ class BuildTsxSheetAction(Action):
                 lines.append('  </properties>')
                 lines.append(' </tile>')
 
-        if wang_2edge or wang_2corner:
+        wang_multisets = ctx.extras.get("wang_multisets") or []
+        if wang_multisets or wang_2edge or wang_2corner:
             bg_tile = max(0, min(tile_count - 1, int(background_tile)))
             fg_tile = max(0, min(tile_count - 1, int(foreground_tile)))
             lines.append(" <wangsets>")
-            if wang_2edge:
-                eo = int(edge_offset)
-                if tile_count < eo + 16:
-                    raise RuntimeError("[build_tsx_sheet] wang_2edge=true 需要 edge_offset 后至少 16 个 tile")
-                lines.append(
-                    f'  <wangset name="{xml_escape(wangset_name)}" type="edge" tile="{fg_tile}">'
-                )
-                lines.append(
-                    f'   <wangcolor name="{xml_escape(background_name)}" '
-                    f'color="{xml_escape(background_color)}" tile="{bg_tile}" probability="1"/>'
-                )
-                lines.append(
-                    f'   <wangcolor name="{xml_escape(foreground_name)}" '
-                    f'color="{xml_escape(foreground_color)}" tile="{fg_tile}" probability="1"/>'
-                )
-                for code in range(16):
-                    mapped = _transform_edge_code(code, wang_transform)
+            if wang_multisets:
+                for spec in wang_multisets:
+                    set_type = str(spec.get("type") or "edge").strip().lower()
+                    if set_type not in ("edge", "corner"):
+                        raise RuntimeError(f"[build_tsx_sheet] 不支持的 wangset type: {set_type}")
+                    terrains = spec.get("terrains") or []
+                    tiles = spec.get("tiles") or []
+                    icon_tileid = int(spec.get("icon_tileid") or 0)
                     lines.append(
-                        f'   <wangtile tileid="{eo + code}" wangid="{_wang_2edge_id(mapped)}"/>'
+                        f'  <wangset name="{xml_escape(str(spec.get("name") or set_type))}" type="{set_type}" tile="{icon_tileid}">'
                     )
-
-                lines.append("  </wangset>")
-            if wang_2corner:
-                co = int(corner_offset)
-                if tile_count < co + 16:
-                    raise RuntimeError("[build_tsx_sheet] wang_2corner=true 需要 corner_offset 后至少 16 个 tile")
-                lines.append(
-                    f'  <wangset name="{xml_escape(corner_wangset_name)}" type="corner" tile="{co + 15}">'
-                )
-                lines.append(
-                    f'   <wangcolor name="{xml_escape(background_name)}" '
-                    f'color="{xml_escape(background_color)}" tile="{co}" probability="1"/>'
-                )
-                lines.append(
-                    f'   <wangcolor name="{xml_escape(foreground_name)}" '
-                    f'color="{xml_escape(foreground_color)}" tile="{co + 15}" probability="1"/>'
-                )
-                for code in range(16):
-                    mapped = _transform_corner_code(code, wang_transform)
+                    for terrain in terrains:
+                        terrain_name = str(terrain.get("name") or "terrain")
+                        terrain_color = str(terrain.get("color") or "#ffffff")
+                        terrain_tile = max(0, min(tile_count - 1, int(terrain.get("tile") or icon_tileid)))
+                        probability = float(terrain.get("probability") or 1)
+                        lines.append(
+                            f'   <wangcolor name="{xml_escape(terrain_name)}" '
+                            f'color="{xml_escape(terrain_color)}" tile="{terrain_tile}" probability="{probability:g}"/>'
+                        )
+                    for entry in tiles:
+                        tileid = int(entry.get("tileid"))
+                        labels = [int(x) for x in (entry.get("wang") or [])]
+                        if len(labels) != 4:
+                            raise RuntimeError("[build_tsx_sheet] 通用 wangset 的 wang 标签必须是 4 个位置")
+                        if set_type == "edge":
+                            mapped = _transform_edge_labels(labels, wang_transform)
+                            wangid = _wang_edge_labels_id(mapped)
+                        else:
+                            mapped = _transform_corner_labels(labels, wang_transform)
+                            wangid = _wang_corner_labels_id(mapped)
+                        lines.append(
+                            f'   <wangtile tileid="{tileid}" wangid="{wangid}"/>'
+                        )
+                    lines.append("  </wangset>")
+            else:
+                if wang_2edge:
+                    eo = int(edge_offset)
+                    if tile_count < eo + 16:
+                        raise RuntimeError("[build_tsx_sheet] wang_2edge=true 需要 edge_offset 后至少 16 个 tile")
                     lines.append(
-                        f'   <wangtile tileid="{co + code}" wangid="{_wang_2corner_id(mapped)}"/>'
+                        f'  <wangset name="{xml_escape(wangset_name)}" type="edge" tile="{fg_tile}">'
                     )
+                    lines.append(
+                        f'   <wangcolor name="{xml_escape(background_name)}" '
+                        f'color="{xml_escape(background_color)}" tile="{bg_tile}" probability="1"/>'
+                    )
+                    lines.append(
+                        f'   <wangcolor name="{xml_escape(foreground_name)}" '
+                        f'color="{xml_escape(foreground_color)}" tile="{fg_tile}" probability="1"/>'
+                    )
+                    for code in range(16):
+                        mapped = _transform_edge_code(code, wang_transform)
+                        lines.append(
+                            f'   <wangtile tileid="{eo + code}" wangid="{_wang_2edge_id(mapped)}"/>'
+                        )
 
-                lines.append("  </wangset>")
+                    lines.append("  </wangset>")
+                if wang_2corner:
+                    co = int(corner_offset)
+                    if tile_count < co + 16:
+                        raise RuntimeError("[build_tsx_sheet] wang_2corner=true 需要 corner_offset 后至少 16 个 tile")
+                    lines.append(
+                        f'  <wangset name="{xml_escape(corner_wangset_name)}" type="corner" tile="{co + 15}">'
+                    )
+                    lines.append(
+                        f'   <wangcolor name="{xml_escape(background_name)}" '
+                        f'color="{xml_escape(background_color)}" tile="{co}" probability="1"/>'
+                    )
+                    lines.append(
+                        f'   <wangcolor name="{xml_escape(foreground_name)}" '
+                        f'color="{xml_escape(foreground_color)}" tile="{co + 15}" probability="1"/>'
+                    )
+                    for code in range(16):
+                        mapped = _transform_corner_code(code, wang_transform)
+                        lines.append(
+                            f'   <wangtile tileid="{co + code}" wangid="{_wang_2corner_id(mapped)}"/>'
+                        )
+
+                    lines.append("  </wangset>")
             lines.append(" </wangsets>")
 
         lines.append("</tileset>")

@@ -1,0 +1,51 @@
+name: multi_tiletype_corner_set
+description: |
+  从 3 张或更多四方连续基础 terrain 贴图生成一个多 terrain 的 Edge Set + Corner Set tileset。
+
+  输入：
+    - terrain_dir：目录，里面每个文件是一种基础地形（grass / sand / water / rock ...）
+      文件名排序即 terrain 顺序，也会作为默认 terrain 名称。
+
+  输出：
+    - N^4 张 Edge Set tile（顺序 N/E/S/W）
+    - N^4 张 Corner Set tile（顺序 TL/TR/BR/BL）
+    - 共 2 * N^4 张 tile，自动 pack 成 sheet，并写入一个包含 N 个 terrain 的 Tiled wangset。
+
+  例子：
+    - 3 种地形：3^4 = 81；edge+corner 共 162 张
+    - 4 种地形：4^4 = 256；edge+corner 共 512 张
+
+  注意：
+    - 地形数量越多，sheet 会迅速变大；3 种最实用，4 种开始更适合分主题拆多个 tileset。
+    - 这是基于“共享边/角连续”的程序化混合规则，不等价于手工定制的每一种三岔路口美术稿。
+
+steps:
+  - action: load_dir
+    params:
+      path: ${terrain_dir}
+      pattern: ${pattern:*}
+      sort: true
+      limit: 0
+
+  - action: multi_terrain_wang_set
+    params:
+      mode: both
+      half_extent: ${half_extent:0.5}
+      resample: ${resample:nearest}
+      expected: ${expected:0}
+      edge_wangset_name: ${edge_wangset_name:edge_set}
+      corner_wangset_name: ${corner_wangset_name:corner_set}
+
+  - action: pack_sheet
+    params:
+      columns: ${columns:18}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      path: ${output:auto}
+
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:multi_tiletype_corner_set}
+      tile_names: true
+      wang_transform: none
