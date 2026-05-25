@@ -1,0 +1,68 @@
+name: multi_tiletype_corner_set_iso45_matrix
+description: |
+  从 3 张或更多四方连续基础 terrain 贴图生成一个多 terrain 的 Isometric Matrix 45° Edge Set + Corner Set tileset。
+
+  输入：
+    - terrain_dir：目录，里面每个文件是一种基础地形（grass / sand / water / rock ...）。
+      文件名排序即 terrain 顺序，也会作为默认 terrain 名称。
+    - tile_width / tile_height：先把每张基础 terrain 标准化到该 topdown 尺寸；默认 64x64。
+    - spec：最终 iso45 cell 规格；默认 128，即 tileset cell 为 128x128，Tiled isometric grid 为 128x64。
+
+  输出：
+    - N^4 张 Edge Set tile（顺序 N/E/S/W，经 iso45_ccw 转换为 Tiled isometric 方向）
+    - N^4 张 Corner Set tile（顺序 TL/TR/BR/BL，经 iso45_ccw 转换为 Tiled isometric 方向）
+    - 共 2 * N^4 张 tile，自动 pack 成 iso45 matrix sheet，并写入带 isometric grid/tileoffset 的 .tsx。
+
+  Tiled 建议：
+    - Map Orientation = Isometric
+    - Map Tile Width = spec
+    - Map Tile Height = spec / 2
+
+steps:
+  - action: load_dir
+    params:
+      path: ${terrain_dir}
+      pattern: ${pattern:*}
+      sort: true
+      limit: 0
+
+  - action: multi_terrain_wang_set
+    params:
+      mode: both
+      half_extent: ${half_extent:0.5}
+      resample: ${resample:nearest}
+      expected: ${expected:0}
+      tile_width: ${tile_width:64}
+      tile_height: ${tile_height:64}
+      edge_wangset_name: ${edge_wangset_name:edge_set}
+      corner_wangset_name: ${corner_wangset_name:corner_set}
+
+  - action: iso45_tile_spec
+    params:
+      preset: ${spec:128}
+
+  - action: for_each
+    params:
+      source: tiles
+      steps:
+        - action: iso45_fit_tile
+          params:
+            preset: context
+            anchor: ${anchor:center}
+            resample: ${iso_resample:bicubic}
+            background: [0, 0, 0, 0]
+
+  - action: pack_sheet
+    params:
+      columns: ${columns:18}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      path: ${output:auto}
+
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:multi_tiletype_corner_set_iso45_matrix}
+      tile_names: true
+      terrain_spec: context
+      wang_transform: iso45_ccw

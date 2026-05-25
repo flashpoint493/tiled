@@ -5,6 +5,8 @@ description: |
   输入：
     - terrain_dir：目录，里面每个文件是一种基础地形（grass / sand / water / rock ...）
       文件名排序即 terrain 顺序，也会作为默认 terrain 名称。
+    - tile_width / tile_height：生成组合前先把每张基础 terrain 标准化到该尺寸；默认 64x64。
+      如需沿用原图最大尺寸，可传 0 或 auto。
 
   输出：
     - N^4 张 Edge Set tile（顺序 N/E/S/W）
@@ -33,6 +35,8 @@ steps:
       half_extent: ${half_extent:0.5}
       resample: ${resample:nearest}
       expected: ${expected:0}
+      tile_width: ${tile_width:64}
+      tile_height: ${tile_height:64}
       edge_wangset_name: ${edge_wangset_name:edge_set}
       corner_wangset_name: ${corner_wangset_name:corner_set}
 

@@ -50,11 +50,18 @@ class LoadDirAction(Action):
         files = [p for p in d.glob(pattern) if p.is_file()]
         if sort:
             files.sort(key=lambda p: p.name)
+
+        image_exts = set(Image.registered_extensions().keys())
+        candidates = files
+        files = [p for p in candidates if p.suffix.lower() in image_exts]
+        skipped = len(candidates) - len(files)
+
         if limit and limit > 0:
             files = files[:limit]
         if not files:
+            extra = f"; skipped {skipped} non-image file(s)" if skipped else ""
             raise RuntimeError(
-                f"[load_dir] {d} 中没有匹配 {pattern!r} 的图片"
+                f"[load_dir] {d} 中没有匹配 {pattern!r} 的图片{extra}"
             )
 
         tiles: List[Image.Image] = []
@@ -68,6 +75,9 @@ class LoadDirAction(Action):
         ctx.image = tiles[0]
         ctx.extras["tiles"] = tiles
         ctx.extras["tile_names"] = names
-        ctx.extras["load_dir"] = {"path": str(d), "count": len(tiles)}
-        print(f"[load_dir] {d}  匹配 {pattern!r}  共 {len(tiles)} 张")
+        ctx.extras["load_dir"] = {"path": str(d), "count": len(tiles), "skipped": skipped}
+        msg = f"[load_dir] {d}  匹配 {pattern!r}  共 {len(tiles)} 张"
+        if skipped:
+            msg += f"，跳过 {skipped} 个非图片文件"
+        print(msg)
         return ctx

@@ -614,7 +614,9 @@ def _materialize_dir_path(raw: Any) -> str:
     """目录参数解析：batch_xxxx / set_xxxx → 运行期目录；绝对路径原样使用。"""
     if raw is None:
         raise HTTPException(400, "load_dir 缺少 path")
-    s = str(raw)
+    s = str(raw).strip()
+    if not s:
+        raise HTTPException(400, "load_dir 缺少 path：请先批量上传图片，或在 path/terrain_dir 填入图片目录")
     p = Path(s).expanduser()
     if p.is_absolute():
         return str(p)

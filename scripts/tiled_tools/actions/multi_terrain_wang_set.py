@@ -84,14 +84,34 @@ def _corner_field(width: int, height: int, corner: str, half_extent: float) -> n
     return t * t * (3.0 - 2.0 * t)
 
 
+def _parse_target_size(value: Any, name: str) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, str):
+        value = value.strip().lower()
+        if not value or value == "auto":
+            return 0
+    try:
+        size = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"[multi_terrain_wang_set] {name} must be an integer or auto") from exc
+    if size < 0:
+        raise ValueError(f"[multi_terrain_wang_set] {name} must be >= 0")
+    return size
+
+
 def _normalize_rgba_tiles(
     tiles: Sequence[Image.Image],
     resample: str,
+    tile_width: Any = 0,
+    tile_height: Any = 0,
 ) -> tuple[List[Image.Image], int, int]:
     if not tiles:
         raise RuntimeError("[multi_terrain_wang_set] 没有输入基础 terrain 贴图")
-    width = max(int(t.size[0]) for t in tiles)
-    height = max(int(t.size[1]) for t in tiles)
+    max_width = max(int(t.size[0]) for t in tiles)
+    max_height = max(int(t.size[1]) for t in tiles)
+    width = _parse_target_size(tile_width, "tile_width") or max_width
+    height = _parse_target_size(tile_height, "tile_height") or max_height
     rs = _RESAMPLE.get((resample or "nearest").lower(), Image.NEAREST)
     out: List[Image.Image] = []
     for t in tiles:
@@ -172,6 +192,8 @@ class MultiTerrainWangSetAction(Action):
         "half_extent": {"min": 0.1, "max": 1.0, "step": 0.05},
         "resample": {"enum": ["nearest", "bilinear", "bicubic", "lanczos"]},
         "expected": {"min": 0, "max": 16, "step": 1},
+        "tile_width": {"min": 0, "step": 1},
+        "tile_height": {"min": 0, "step": 1},
     }
 
     def run(
@@ -181,6 +203,8 @@ class MultiTerrainWangSetAction(Action):
         half_extent: float = 0.5,
         resample: str = "nearest",
         expected: int = 0,
+        tile_width: Any = 0,
+        tile_height: Any = 0,
         terrain_names: Any = None,
         terrain_colors: Any = None,
         edge_wangset_name: str = "edge_set",
@@ -201,7 +225,12 @@ class MultiTerrainWangSetAction(Action):
         if mode not in ("edge", "corner", "both"):
             raise ValueError("[multi_terrain_wang_set] mode 应为 edge / corner / both")
 
-        base_tiles, width, height = _normalize_rgba_tiles(source_tiles, resample)
+        base_tiles, width, height = _normalize_rgba_tiles(
+            source_tiles,
+            resample,
+            tile_width=tile_width,
+            tile_height=tile_height,
+        )
         terrain_count = len(base_tiles)
         if terrain_count < 2:
             raise RuntimeError("[multi_terrain_wang_set] 至少需要 2 张基础 terrain 贴图")

@@ -5,7 +5,8 @@ description: |
   肉眼看接缝处有无可见竖/横/十字裂缝即可判断质量。
 
   method 选择建议：
-    - feather（默认）   纹理类素材：沙、草、岩石、布料、水面、雪
+    - multiband（默认）水、草、沙、岩石、雪等自然材质，高质量多频段融合
+    - feather           快速 mask 混合，适合先做轻量预览
     - mirror            细节非常杂乱、要求 0 接缝（注意会有对称感）
     - offset_blur       低频接缝（不均匀渐变背景类）
 
@@ -16,10 +17,11 @@ steps:
 
   - action: make_seamless
     params:
-      method: ${method:feather}
-      overlap: 0.25            # feather 用
-      blur_radius: 8           # offset_blur 用
-      blur_band: 0.15          # offset_blur 用
+      method: ${method:multiband}
+      overlap: ${overlap:0.30}      # multiband / feather 用；水面可试 0.35，砖石可试 0.20
+      levels: ${levels:5}           # multiband 用；草/岩石 4~5，水面 5~6
+      blur_radius: ${blur_radius:8} # offset_blur 用
+      blur_band: ${blur_band:0.15}  # offset_blur 用
 
   # 先把"无缝化的单张"保存
   - action: save

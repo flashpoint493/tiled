@@ -740,6 +740,10 @@ function guessByContext(varName, actionName, paramKey) {
   if (varName === "input" || varName === "src") {
     return state.uploaded ? state.uploaded.file_id : "";
   }
+  // directory 类：load_dir.path 使用最近一次批量上传目录
+  if (actionName === "load_dir" && (paramKey === "path" || varName.endsWith("_dir") || varName === "dir" || varName === "path")) {
+    return state.batchUploaded ? state.batchUploaded.dir_id : "";
+  }
   // output 类：save.path 用 auto；save_all.dir 也用 auto
   if (varName === "output" || varName === "out") {
     return actionName === "save" ? "auto" : "";

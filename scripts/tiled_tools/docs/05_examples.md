@@ -72,9 +72,19 @@ python -m tiled_tools run iso_to_topdown \
 
 参数建议：
 
-- `method=feather`：纹理类默认推荐。
+- `method=multiband`：默认推荐。多频段融合，低频负责颜色/亮度过渡，高频尽量保留纹理细节，适合水、草、沙、岩石、雪等自然材质。
+- `method=feather`：快速 mask 混合，适合先做轻量预览。
 - `method=mirror`：接缝要求极低但可接受镜像感。
 - `method=offset_blur`：低频渐变背景。
+
+常用预设：
+
+| 材质 | 推荐参数 |
+| --- | --- |
+| 水面 | `method=multiband`, `overlap=0.35`, `levels=5` 或 `6` |
+| 草地 / 沙地 | `method=multiband`, `overlap=0.30`, `levels=4` 或 `5` |
+| 自然岩石 / 碎石 | `method=multiband`, `overlap=0.28`, `levels=4` 或 `5` |
+| 砖石 / 地砖 | `method=multiband`, `overlap=0.20`, `levels=4`；若砖缝错位，优先回原图调整结构 |
 
 ---
 
@@ -126,6 +136,149 @@ python -m tiled_tools run tileset_to_iso45_matrix \
   -v output=output/sand_iso_matrix.png \
   -v tile_width=256 -v tile_height=256 -v columns=4 -v spec=256
 ```
+
+### `multi_tiletype_corner_set` / `multi_tiletype_corner_set_iso45_matrix`
+
+把一个目录里的多张基础 terrain PNG 自动生成为一套 topdown matrix tileset，再生成一套 tile id 顺序一致的 isomatrix45 tileset。适合先用 topdown 地图编辑，再通过替换 `.tsx` 和修改地图参数切换到 iso45 显示。
+
+典型输入目录：
+
+```text
+Tileset_origin_03/
+├── tiles/
+│   ├── 01_grass.png
+│   ├── 02_dirt.png
+│   ├── 03_rock.png
+│   └── 04_water.png
+└── generated/
+```
+
+文件名排序就是 terrain 顺序。topdown 和 iso45 两次生成必须保持同一个目录、同一个 `pattern`、同一套 `tile_width` / `tile_height`，这样两个 tileset 的 tile local id 才能一一对应。
+
+Web 端操作：
+
+1. 启动服务：
+
+   ```powershell
+   cd D:\Github\tiled\scripts
+   python -m tiled_tools serve --port 8765
+   ```
+
+2. 浏览器打开 `http://127.0.0.1:8765/`。
+3. 先选择 workflow `multi_tiletype_corner_set`，填写：
+
+   ```text
+   terrain_dir = <你的 Tileset_origin_03\tiles 目录>
+   pattern = *.png
+   expected = 4
+   tile_width = 64
+   tile_height = 64
+   columns = 32
+   output = <输出目录>\Tileset_origin_03_topdown_matrix.png
+   tsx = <输出目录>\Tileset_origin_03_topdown_matrix.tsx
+   name = Tileset_origin_03_topdown_matrix
+   ```
+
+4. 再选择 workflow `multi_tiletype_corner_set_iso45_matrix`，填写：
+
+   ```text
+   terrain_dir = <同一个 tiles 目录>
+   pattern = *.png
+   expected = 4
+   tile_width = 64
+   tile_height = 64
+   spec = 128
+   columns = 32
+   anchor = center
+   output = <输出目录>\Tileset_origin_03_iso45_matrix.png
+   tsx = <输出目录>\Tileset_origin_03_iso45_matrix.tsx
+   name = Tileset_origin_03_iso45_matrix
+   ```
+
+CLI 等价命令示例：
+
+```powershell
+cd D:\Github\tiled\scripts
+$src = "D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_03\tiles"
+$out = "D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_03\generated"
+New-Item -ItemType Directory -Force $out
+
+python -m tiled_tools run multi_tiletype_corner_set `
+  -v "terrain_dir=$src" `
+  -v "pattern=*.png" `
+  -v expected=4 `
+  -v tile_width=64 `
+  -v tile_height=64 `
+  -v columns=32 `
+  -v "output=$out\Tileset_origin_03_topdown_matrix.png" `
+  -v "tsx=$out\Tileset_origin_03_topdown_matrix.tsx" `
+  -v name=Tileset_origin_03_topdown_matrix
+
+python -m tiled_tools run multi_tiletype_corner_set_iso45_matrix `
+  -v "terrain_dir=$src" `
+  -v "pattern=*.png" `
+  -v expected=4 `
+  -v tile_width=64 `
+  -v tile_height=64 `
+  -v spec=128 `
+  -v columns=32 `
+  -v anchor=center `
+  -v "output=$out\Tileset_origin_03_iso45_matrix.png" `
+  -v "tsx=$out\Tileset_origin_03_iso45_matrix.tsx" `
+  -v name=Tileset_origin_03_iso45_matrix
+```
+
+4 种 terrain 的输出规模：
+
+```text
+4^4 = 256 张 Edge Set tile
+4^4 = 256 张 Corner Set tile
+总计 512 张 tile
+```
+
+推荐第一轮规格：
+
+| 参数 | 推荐值 | 说明 |
+| --- | --- | --- |
+| `tile_width` / `tile_height` | `64` / `64` | 先轻量验证工作流和地形语义 |
+| `spec` | `128` | iso45 cell 为 `128×128`，Tiled grid 为 `128×64` |
+| `columns` | `32` | 512 张 tile 排成 `32×16` |
+
+如果画质不够，再升级到 `tile_width=128`、`tile_height=128`、`spec=256`。不建议一开始就用 `256/512` 规格，因为 4 种 terrain 会生成很大的 sheet。
+
+在 Tiled 里使用：
+
+- topdown 地图：`Orientation=Orthogonal`，`Tile Width=64`，`Tile Height=64`，加载 `Tileset_origin_03_topdown_matrix.tsx`。
+- iso45 地图：`Orientation=Isometric`，`Tile Width=128`，`Tile Height=64`，加载 `Tileset_origin_03_iso45_matrix.tsx`。
+- iso45 `.tsx` 会写入 isometric grid 和 tile offset；`spec=128` 时 grid 是 `128×64`，tileoffset 是 `x=0, y=32`。
+
+已有 topdown 地图迁移到 iso45：
+
+1. 复制一份 `.tmj`，例如 `Level_01_topdown.tmj` → `Level_01_iso45.tmj`。
+2. 把地图属性改成：
+
+   ```json
+   "orientation": "isometric",
+   "tilewidth": 128,
+   "tileheight": 64
+   ```
+
+3. 把 tileset source 从 topdown `.tsx` 改成 iso45 `.tsx`。
+4. 保持 `firstgid` 不变。
+5. 不要修改 tile layer 的 `data`。
+
+关键验收点：
+
+- topdown 与 iso45 两套产物的 tile local id 顺序一致。
+- `firstgid` 不变时，旧地图 layer data 可以直接复用。
+- `edge_set` 和 `corner_set` 都能在 Tiled Terrain Sets / Wang Sets 中识别。
+- tile layer 可无缝迁移；object layer 因投影变化，可能需要人工检查位置。
+
+常见坑：
+
+- `pattern` 不要写 `*`，应写 `*.png`，否则目录里混入 `.zip` / `.tsx` / 旧输出时会被当成图片读取。
+- 不要在生成 topdown 后重命名或增删 `tiles` 目录里的源图再生成 iso45，否则 tile id 可能错位。
+- `tile_width` / `tile_height` 是标准化后的 topdown tile 尺寸，不是源图原始尺寸；源图尺寸可以不完全一致。
 
 ### `batch_images_to_tilesheet`
 

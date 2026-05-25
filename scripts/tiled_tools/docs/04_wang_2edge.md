@@ -372,6 +372,30 @@ python -m tiled_tools run multi_tiletype_corner_set \
 3. 把第一步 `load_dir.path` 改成批量导入得到的目录 id（如 `batch_ab12cd34`）
 4. ▶ 运行，下载生成的 `sheet.png` 与 `.tsx`
 
+### Iso45 matrix 版本
+
+如果还需要与 topdown 版本 tile id 对齐的 isometric tileset，使用 `multi_tiletype_corner_set_iso45_matrix`。它会先生成同样顺序的 Edge Set + Corner Set，再把每张 tile 转为 45° isometric cell，并在 `.tsx` 写入 isometric grid 与 tile offset。
+
+典型参数：
+
+```bash
+python -m tiled_tools run multi_tiletype_corner_set_iso45_matrix \
+    -v terrain_dir=terrains \
+    -v pattern="*.png" \
+    -v expected=4 \
+    -v tile_width=64 \
+    -v tile_height=64 \
+    -v spec=128 \
+    -v columns=32 \
+    -v name=terrain_iso45_matrix
+```
+
+`spec=128` 时，tileset cell 是 `128×128`，Tiled isometric grid 是 `128×64`，tileoffset 是 `x=0, y=32`。在 Tiled 中新建或迁移地图时使用 `Orientation=Isometric`、`Tile Width=128`、`Tile Height=64`。
+
+如果要让已有 topdown 地图无缝切到 iso45：保持两次生成的源目录排序一致，地图里保持 `firstgid` 和 layer `data` 不变，只把 tileset source 从 topdown `.tsx` 换成 iso45 `.tsx`，并把地图 orientation/tile size 改为 isometric 规格。
+
+完整端到端教程见 [输入 / 输出案例](05_examples.md) 的 `multi_tiletype_corner_set` / `multi_tiletype_corner_set_iso45_matrix` 小节。
+
 ### 结果解释
 
 生成的 `.tsx` 里会有：

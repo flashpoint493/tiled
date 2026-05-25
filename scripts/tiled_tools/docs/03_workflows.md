@@ -1,6 +1,6 @@
 ﻿# Workflow 配方
 
-> 17 个内置 workflow + 经典组合的速查。需要输入/输出截图时，先看 [输入 / 输出案例](05_examples.md)。
+> 19 个内置 workflow + 经典组合的速查。需要输入/输出截图时，先看 [输入 / 输出案例](05_examples.md)。
 
 
 
@@ -15,6 +15,9 @@
 | `tile_repeat_3x3` | 1 张贴图 | 1 张大图 | 验证循环 / 铺地预览 |
 | `tilesheet_split_connected` | 1 张透明背景 tilesheet | 多张独立 PNG | 按 alpha 连通区域自动裁出散排贴图 |
 | `batch_images_to_tilesheet` | 多张独立图片 / 一个目录 | 1 张 sheet + 1 .tsx | 批量导入图片组成 Tiled tilesheet |
+| `tileset_to_iso45_matrix` | 1 张已排好的 topdown tileset sheet | tile id 顺序不变的 iso45 matrix PNG | 已有地图从 topdown 迁移到 iso45 |
+| `multi_tiletype_corner_set` | 3 张或更多基础 terrain PNG 目录 | Edge Set + Corner Set topdown sheet + .tsx | 多 terrain 自动刷地形 |
+| `multi_tiletype_corner_set_iso45_matrix` | 同上 | Edge Set + Corner Set iso45 matrix sheet + .tsx | 与 topdown 版本 tile id 对齐的 isometric terrain tileset |
 | `make_seamless` | 1 张贴图 | 无缝单图 + 3×3 验证图 | 把素材变成四方连续 |
 
 | **`wang_2edge_set`** | 2 张底图（沙/水）| 1 张 sheet + 1 .tsx | 自动 Edge Set 过渡素材 |
@@ -51,6 +54,51 @@ CLI / 手动 workflow：
 ```
 
 产物是一张 sheet PNG 和一份同目录 `.tsx`，可直接在 Tiled 打开。
+
+### A0.5. 多 terrain 原图 → topdown / iso45 matrix 成套生成
+
+适合一个目录里每张 PNG 都是一种四方连续基础地形的情况，例如 `grass` / `dirt` / `rock` / `water`。文件名排序决定 terrain 顺序；topdown 和 iso45 两次生成必须使用同一目录、同一排序、同一规格，才能保持 tile local id 一致。
+
+> 重要：目录里如果会混入下载包、旧输出或 `.tsx`，`load_dir.pattern` 必须写成 `*.png`，不要用 `*`，避免把 `.zip` 等非图片文件当成图片读取。
+
+以 4 种 terrain、`64×64` topdown tile、`128×128` iso45 cell 为例：
+
+```powershell
+cd D:\Github\tiled\scripts
+$src = "D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_03\tiles"
+$out = "D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_03\generated"
+New-Item -ItemType Directory -Force $out
+
+python -m tiled_tools run multi_tiletype_corner_set `
+  -v "terrain_dir=$src" `
+  -v "pattern=*.png" `
+  -v expected=4 `
+  -v tile_width=64 `
+  -v tile_height=64 `
+  -v columns=32 `
+  -v "output=$out\Tileset_origin_03_topdown_matrix.png" `
+  -v "tsx=$out\Tileset_origin_03_topdown_matrix.tsx" `
+  -v name=Tileset_origin_03_topdown_matrix
+
+python -m tiled_tools run multi_tiletype_corner_set_iso45_matrix `
+  -v "terrain_dir=$src" `
+  -v "pattern=*.png" `
+  -v expected=4 `
+  -v tile_width=64 `
+  -v tile_height=64 `
+  -v spec=128 `
+  -v columns=32 `
+  -v anchor=center `
+  -v "output=$out\Tileset_origin_03_iso45_matrix.png" `
+  -v "tsx=$out\Tileset_origin_03_iso45_matrix.tsx" `
+  -v name=Tileset_origin_03_iso45_matrix
+```
+
+4 种 terrain 会生成 `4^4 = 256` 张 Edge Set tile 和 `256` 张 Corner Set tile，共 `512` 张。`spec=128` 时，Tiled isometric map 使用 `Tile Width=128`、`Tile Height=64`。
+
+如果已有 topdown 地图要迁移到 iso45：复制地图文件，把地图改为 `orientation=isometric`、`tilewidth=128`、`tileheight=64`，把 tileset source 从 topdown `.tsx` 换成 iso45 `.tsx`，保持 `firstgid` 和 layer `data` 不变。
+
+完整操作手册见 [输入 / 输出案例](05_examples.md) 的 `multi_tiletype_corner_set` / `multi_tiletype_corner_set_iso45_matrix` 小节。
 
 ### A1. 透明 tilesheet → 多张独立 PNG
 
