@@ -10,7 +10,7 @@ description: |
 
   输出：
     - N^4 张 Edge Set tile（顺序 N/E/S/W，经 iso45_ccw 转换为 Tiled isometric 方向）
-    - N^4 张 Corner Set tile（顺序 TL/TR/BR/BL，经 iso45_ccw 转换为 Tiled isometric 方向）
+    - N^4 张 Corner Set tile（Tiled 原生顺序 TR/BR/BL/TL，经 iso45_ccw 转换为 Tiled isometric 方向）
     - 共 2 * N^4 张 tile，自动 pack 成 iso45 matrix sheet，并写入带 isometric grid/tileoffset 的 .tsx。
 
   Tiled 建议：

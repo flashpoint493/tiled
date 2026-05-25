@@ -5,7 +5,7 @@
 - 先用 `load_dir` 读取一个目录中的基础地形循环贴图（grass / sand / water ...）
 - 然后本 action 按 edge / corner / both 生成全部组合：
   * edge   : N^4 张（顺序 N/E/S/W）
-  * corner : N^4 张（顺序 TL/TR/BR/BL）
+  * corner : N^4 张（Tiled 原生顺序 TR/BR/BL/TL）
   * both   : 2 * N^4 张（先 edge 后 corner）
 
 输出：
@@ -143,40 +143,67 @@ def _resolve_colors(raw_colors: Any, count: int) -> List[str]:
 
 
 def _edge_weights(labels: Sequence[int], width: int, height: int, half_extent: float, terrain_count: int) -> np.ndarray:
+    """根据 N/E/S/W 边标签生成更干净的边缘权重。
+
+    旧实现把四条边的线性距离场直接归一化，3+ terrain 时会在很大区域
+    产生泥状平均色。这里改为“最近边”软分配：每个像素主要继承最近边
+    的 terrain，只在两条边的分界附近柔和过渡。
+    """
+    ys = np.linspace(0, 1, height, dtype=np.float32)
+    xs = np.linspace(0, 1, width, dtype=np.float32)
+    y, x = np.meshgrid(ys, xs, indexing="ij")
+
+    side_distances = np.stack([
+        y,          # Top
+        1.0 - x,   # Right
+        1.0 - y,   # Bottom
+        x,          # Left
+    ], axis=0)
+    softness = max(1e-6, float(half_extent) * 0.25)
+    side_scores = np.exp(-side_distances / softness).astype(np.float32)
+    side_scores /= np.clip(side_scores.sum(axis=0, keepdims=True), 1e-6, None)
+
     weights = np.zeros((terrain_count, height, width), dtype=np.float32)
-    counts = np.zeros((terrain_count,), dtype=np.float32)
-    pairs = [(0, 1, "NE"), (1, 2, "SE"), (2, 3, "SW"), (3, 0, "NW")]
-    edges = [("N", labels[0]), ("E", labels[1]), ("S", labels[2]), ("W", labels[3])]
-    for edge_name, idx in edges:
-        counts[idx] += 1.0
-        weights[idx] = np.maximum(weights[idx], _edge_field(width, height, edge_name, half_extent))
-    for a, b, corner_name in pairs:
-        if labels[a] == labels[b]:
-            idx = labels[a]
-            weights[idx] = np.maximum(weights[idx], _corner_field(width, height, corner_name, half_extent))
-    priors = (counts / max(1.0, counts.sum())).reshape(terrain_count, 1, 1) * 1e-3
-    weights = weights + priors
+    for side_idx, terrain_idx in enumerate(labels):
+        weights[int(terrain_idx)] += side_scores[side_idx]
+
+    weights = np.power(np.clip(weights, 0.0, 1.0), 1.35)
     denom = np.clip(weights.sum(axis=0, keepdims=True), 1e-6, None)
     return weights / denom
 
 
 def _corner_weights(labels: Sequence[int], width: int, height: int, terrain_count: int) -> np.ndarray:
+    """根据 Tiled Corner WangSet 原生顺序 TR/BR/BL/TL 生成角权重。"""
     ys = np.linspace(0, 1, height, dtype=np.float32)
     xs = np.linspace(0, 1, width, dtype=np.float32)
     y, x = np.meshgrid(ys, xs, indexing="ij")
 
     weights = np.zeros((terrain_count, height, width), dtype=np.float32)
     for terrain_idx in range(terrain_count):
-        tl = 1.0 if labels[0] == terrain_idx else 0.0
-        tr = 1.0 if labels[1] == terrain_idx else 0.0
-        br = 1.0 if labels[2] == terrain_idx else 0.0
-        bl = 1.0 if labels[3] == terrain_idx else 0.0
+        tr = 1.0 if labels[0] == terrain_idx else 0.0
+        br = 1.0 if labels[1] == terrain_idx else 0.0
+        bl = 1.0 if labels[2] == terrain_idx else 0.0
+        tl = 1.0 if labels[3] == terrain_idx else 0.0
         top = tl * (1.0 - x) + tr * x
         bottom = bl * (1.0 - x) + br * x
         acc = top * (1.0 - y) + bottom * y
         weights[terrain_idx] = acc * acc * (3.0 - 2.0 * acc)
     denom = np.clip(weights.sum(axis=0, keepdims=True), 1e-6, None)
     return weights / denom
+
+
+def _mixed_labels_from_corners(labels: Sequence[int]) -> List[int]:
+    """从 TR/BR/BL/TL 四角派生 Tiled mixed wangid 的 8 段标签。
+
+    输出顺序遵循 Tiled WangId：Top, TopRight, Right, BottomRight,
+    Bottom, BottomLeft, Left, TopLeft。
+    """
+    tr, br, bl, tl = [int(x) for x in labels]
+    top = tl if tl == tr else tr
+    right = tr if tr == br else br
+    bottom = bl if bl == br else br
+    left = tl if tl == bl else bl
+    return [top, tr, right, br, bottom, bl, left, tl]
 
 
 def _blend_tiles(base_np: np.ndarray, weights: np.ndarray) -> Image.Image:
@@ -186,16 +213,15 @@ def _blend_tiles(base_np: np.ndarray, weights: np.ndarray) -> Image.Image:
 
 @register("multi_terrain_wang_set")
 class MultiTerrainWangSetAction(Action):
-    description = "从多张基础 terrain 贴图生成多 terrain 的 edge/corner wang tileset"
+    description = "从多张基础 terrain 贴图生成多 terrain 的 edge/corner/mixed wang tileset"
     param_hints = {
-        "mode": {"enum": ["edge", "corner", "both"]},
+        "mode": {"enum": ["edge", "corner", "mixed", "both", "all"]},
         "half_extent": {"min": 0.1, "max": 1.0, "step": 0.05},
         "resample": {"enum": ["nearest", "bilinear", "bicubic", "lanczos"]},
         "expected": {"min": 0, "max": 16, "step": 1},
         "tile_width": {"min": 0, "step": 1},
         "tile_height": {"min": 0, "step": 1},
     }
-
     def run(
         self,
         ctx: Context,
@@ -209,6 +235,7 @@ class MultiTerrainWangSetAction(Action):
         terrain_colors: Any = None,
         edge_wangset_name: str = "edge_set",
         corner_wangset_name: str = "corner_set",
+        mixed_wangset_name: str = "mixed_set",
     ) -> Context:
         source_tiles = ctx.extras.get("tiles") or []
         if not source_tiles:
@@ -222,8 +249,11 @@ class MultiTerrainWangSetAction(Action):
             )
 
         mode = (mode or "both").lower()
-        if mode not in ("edge", "corner", "both"):
-            raise ValueError("[multi_terrain_wang_set] mode 应为 edge / corner / both")
+        if mode not in ("edge", "corner", "mixed", "both", "all"):
+            raise ValueError("[multi_terrain_wang_set] mode 应为 edge / corner / mixed / both / all")
+        include_edge = mode in ("edge", "both", "all")
+        include_corner = mode in ("corner", "both", "all")
+        include_mixed = mode in ("mixed", "all")
 
         base_tiles, width, height = _normalize_rgba_tiles(
             source_tiles,
@@ -247,7 +277,7 @@ class MultiTerrainWangSetAction(Action):
         offset = 0
         combos = list(product(range(terrain_count), repeat=4))
 
-        if mode in ("edge", "both"):
+        if include_edge:
             edge_entries: List[Dict[str, Any]] = []
             for idx, labels in enumerate(combos):
                 weights = _edge_weights(labels, width, height, float(half_extent), terrain_count)
@@ -268,7 +298,7 @@ class MultiTerrainWangSetAction(Action):
             })
             offset += len(combos)
 
-        if mode in ("corner", "both"):
+        if include_corner:
             corner_entries: List[Dict[str, Any]] = []
             for idx, labels in enumerate(combos):
                 weights = _corner_weights(labels, width, height, terrain_count)
@@ -287,6 +317,31 @@ class MultiTerrainWangSetAction(Action):
                 ],
                 "tiles": corner_entries,
             })
+            offset += len(combos)
+
+        if include_mixed:
+            mixed_entries: List[Dict[str, Any]] = []
+            for idx, labels in enumerate(combos):
+                weights = _corner_weights(labels, width, height, terrain_count)
+                out_tiles.append(_blend_tiles(base_np, weights))
+                out_names.append(
+                    "mixed_" + "_".join(names[i] for i in labels)
+                )
+                mixed_entries.append({
+                    "tileid": offset + idx,
+                    "wang": _mixed_labels_from_corners(labels),
+                })
+            wang_multisets.append({
+                "name": mixed_wangset_name,
+                "type": "mixed",
+                "icon_tileid": offset,
+                "terrains": [
+                    {"name": names[i], "color": colors[i], "tile": offset + i * (terrain_count ** 3 + terrain_count ** 2 + terrain_count + 1)}
+                    for i in range(terrain_count)
+                ],
+                "tiles": mixed_entries,
+            })
+            offset += len(combos)
 
         ctx.image = out_tiles[-1]
         ctx.extras["tiles"] = out_tiles

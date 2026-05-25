@@ -1,6 +1,6 @@
 name: multi_tiletype_corner_set
 description: |
-  从 3 张或更多四方连续基础 terrain 贴图生成一个多 terrain 的 Edge Set + Corner Set tileset。
+  从 3 张或更多四方连续基础 terrain 贴图生成一个多 terrain 的 Edge Set + Corner Set + Mixed Set tileset。
 
   输入：
     - terrain_dir：目录，里面每个文件是一种基础地形（grass / sand / water / rock ...）
@@ -10,12 +10,13 @@ description: |
 
   输出：
     - N^4 张 Edge Set tile（顺序 N/E/S/W）
-    - N^4 张 Corner Set tile（顺序 TL/TR/BR/BL）
-    - 共 2 * N^4 张 tile，自动 pack 成 sheet，并写入一个包含 N 个 terrain 的 Tiled wangset。
+    - N^4 张 Corner Set tile（Tiled 顺序 TR/BR/BL/TL）
+    - N^4 张紧凑 Mixed Set tile（完整 8 段 wangid，图像复用 corner 形状）
+    - 共 3 * N^4 张 tile，自动 pack 成 sheet，并写入包含 N 个 terrain 的 Tiled wangsets。
 
   例子：
-    - 3 种地形：3^4 = 81；edge+corner 共 162 张
-    - 4 种地形：4^4 = 256；edge+corner 共 512 张
+    - 3 种地形：3^4 = 81；edge+corner+mixed 共 243 张
+    - 4 种地形：4^4 = 256；edge+corner+mixed 共 768 张
 
   注意：
     - 地形数量越多，sheet 会迅速变大；3 种最实用，4 种开始更适合分主题拆多个 tileset。
@@ -31,7 +32,7 @@ steps:
 
   - action: multi_terrain_wang_set
     params:
-      mode: both
+      mode: ${mode:all}
       half_extent: ${half_extent:0.5}
       resample: ${resample:nearest}
       expected: ${expected:0}
@@ -39,6 +40,7 @@ steps:
       tile_height: ${tile_height:64}
       edge_wangset_name: ${edge_wangset_name:edge_set}
       corner_wangset_name: ${corner_wangset_name:corner_set}
+      mixed_wangset_name: ${mixed_wangset_name:mixed_set}
 
   - action: pack_sheet
     params:

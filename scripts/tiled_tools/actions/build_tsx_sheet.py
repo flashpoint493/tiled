@@ -154,8 +154,14 @@ def _wang_edge_labels_id(labels: list[int]) -> str:
 
 
 def _wang_corner_labels_id(labels: list[int]) -> str:
-    tl, tr, br, bl = [int(x) + 1 for x in labels]
+    tr, br, bl, tl = [int(x) + 1 for x in labels]
     return f"0,{tr},0,{br},0,{bl},0,{tl}"
+
+
+def _wang_mixed_labels_id(labels: list[int]) -> str:
+    if len(labels) != 8:
+        raise RuntimeError("[build_tsx_sheet] mixed wangset 的 wang 标签必须是 8 个位置")
+    return ",".join(str(int(x) + 1) for x in labels)
 
 
 @register("build_tsx_sheet")
@@ -328,7 +334,7 @@ class BuildTsxSheetAction(Action):
             if wang_multisets:
                 for spec in wang_multisets:
                     set_type = str(spec.get("type") or "edge").strip().lower()
-                    if set_type not in ("edge", "corner"):
+                    if set_type not in ("edge", "corner", "mixed"):
                         raise RuntimeError(f"[build_tsx_sheet] 不支持的 wangset type: {set_type}")
                     terrains = spec.get("terrains") or []
                     tiles = spec.get("tiles") or []
@@ -348,14 +354,20 @@ class BuildTsxSheetAction(Action):
                     for entry in tiles:
                         tileid = int(entry.get("tileid"))
                         labels = [int(x) for x in (entry.get("wang") or [])]
-                        if len(labels) != 4:
-                            raise RuntimeError("[build_tsx_sheet] 通用 wangset 的 wang 标签必须是 4 个位置")
                         if set_type == "edge":
+                            if len(labels) != 4:
+                                raise RuntimeError("[build_tsx_sheet] edge wangset 的 wang 标签必须是 4 个位置")
                             mapped = _transform_edge_labels(labels, wang_transform)
                             wangid = _wang_edge_labels_id(mapped)
-                        else:
+                        elif set_type == "corner":
+                            if len(labels) != 4:
+                                raise RuntimeError("[build_tsx_sheet] corner wangset 的 wang 标签必须是 4 个位置")
                             mapped = _transform_corner_labels(labels, wang_transform)
                             wangid = _wang_corner_labels_id(mapped)
+                        else:
+                            if wang_transform not in ("", "none"):
+                                raise RuntimeError("[build_tsx_sheet] mixed wangset 暂不支持 wang_transform")
+                            wangid = _wang_mixed_labels_id(labels)
                         lines.append(
                             f'   <wangtile tileid="{tileid}" wangid="{wangid}"/>'
                         )
