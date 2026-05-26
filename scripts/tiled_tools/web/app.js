@@ -187,7 +187,7 @@ function renderField(step, field) {
   }
 
   const wrap = document.createElement("div");
-  const isFull = field.type === "tuple" || field.type === "any" || field.widget === "filepath";
+  const isFull = field.type === "tuple" || field.type === "any" || field.widget === "filepath" || field.widget === "dirpath";
   wrap.className = "field" + (isFull ? " full" : "");
 
   const label = document.createElement("label");
@@ -245,6 +245,18 @@ function renderField(step, field) {
     if (step.action === "save" && field.name === "path") {
       input.placeholder = "auto = 自动分配；或写文件名 / 绝对路径";
     }
+    if (field.widget === "dirpath") {
+      input.placeholder = "填写图片目录路径，或先用“批量导入图片”生成 batch_xxxx；不要填写 .tmx/.tmj 文件";
+    }
+  }
+
+  if (field.widget === "dirpath") {
+    const tip = document.createElement("div");
+    tip.className = "muted";
+    tip.textContent = "目录输入：需要包含 terrain PNG 的文件夹；.tmx/.tmj 是地图文件，不能用于 load_dir。";
+    wrap.appendChild(input);
+    wrap.appendChild(tip);
+    return wrap;
   }
 
   // filepath widget 字段：在右侧加 📎 上传按钮，点它直接上传并填入 file_id
@@ -621,7 +633,7 @@ async function refreshWorkflows() {
     g.label = "已保存";
     for (const w of userItems) {
       const o = document.createElement("option");
-      o.value = w.id; o.textContent = w.name;
+      o.value = w.id; o.textContent = w.project_only ? `${w.name}（项目专用）` : w.name;
       g.appendChild(o);
     }
     sel.appendChild(g);
@@ -631,7 +643,7 @@ async function refreshWorkflows() {
     g.label = "内置（只读）";
     for (const w of builtinItems) {
       const o = document.createElement("option");
-      o.value = w.id; o.textContent = w.name;
+      o.value = w.id; o.textContent = w.project_only ? `${w.name}（项目专用）` : w.name;
       g.appendChild(o);
     }
     sel.appendChild(g);

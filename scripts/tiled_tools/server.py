@@ -629,7 +629,7 @@ def _materialize_dir_path(raw: Any) -> str:
             cand.relative_to(RUNTIME_DIR.resolve())
         except ValueError:
             continue
-        if cand.is_dir():
+        if cand.is_dir() or cand.is_file():
             return str(cand)
     # 找不到运行期目录时，按普通相对路径交给 action 自己报错（CLI / 本地调试友好）
     return str(p)
@@ -697,6 +697,7 @@ def _read_workflow_json(p: Path) -> Dict[str, Any]:
         "name": data.get("name") or p.stem,
         "description": data.get("description", ""),
         "steps": data.get("steps") or [],
+        "project_only": bool(data.get("project_only")),
         "source": "user",
         "path": str(p),
     }
@@ -714,6 +715,7 @@ def _read_pipeline_yaml(p: Path) -> Dict[str, Any]:
         "name": data.get("name") or p.stem,
         "description": data.get("description", ""),
         "steps": data.get("steps") or [],
+        "project_only": bool(data.get("project_only")),
         "source": "builtin",
         "path": str(p),
     }

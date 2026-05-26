@@ -35,6 +35,9 @@
 - wang_transform:
                 方向转换。`none` 适合 topdown sheet；`iso45_ccw` 适合经过
                 topdown_to_iso(angle=45) 的 sheet。
+- edge_wang_transform / corner_wang_transform / mixed_wang_transform:
+                可选按 wangset 类型覆盖方向转换。`corner_wang_transform=clockwise`
+                表示只将 Corner Set 的 Wang 规则绘制方向顺时针旋转 90°，不旋转 tile 图像。
 
 
 
@@ -98,6 +101,13 @@ def _transform_corner_code(code: int, transform: str) -> int:
         if code & 8: new_code |= 4   # old BL -> Tiled BR
         if code & 1: new_code |= 8   # old TL -> Tiled BL
         return new_code
+    if transform in ("clockwise", "cw90", "iso45_ccw_cw90", "iso45_ccw_then_cw90"):
+        new_code = 0
+        if code & 1: new_code |= 2
+        if code & 2: new_code |= 4
+        if code & 4: new_code |= 8
+        if code & 8: new_code |= 1
+        return new_code
     if transform == "opposite":
         new_code = 0
         if code & 4: new_code |= 1
@@ -143,8 +153,21 @@ def _transform_corner_labels(labels: list[int], transform: str) -> list[int]:
         return list(labels)
     if transform in ("iso45", "iso45_ccw"):
         return [labels[1], labels[2], labels[3], labels[0]]
+    if transform in ("clockwise", "cw90", "iso45_ccw_cw90", "iso45_ccw_then_cw90"):
+        return [labels[3], labels[0], labels[1], labels[2]]
     if transform == "opposite":
         return [labels[2], labels[3], labels[0], labels[1]]
+    raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
+
+
+def _transform_mixed_labels(labels: list[int], transform: str) -> list[int]:
+    transform = (transform or "none").lower()
+    if transform in ("", "none"):
+        return list(labels)
+    if transform in ("iso45", "iso45_ccw"):
+        return [labels[2], labels[3], labels[4], labels[5], labels[6], labels[7], labels[0], labels[1]]
+    if transform == "opposite":
+        return [labels[4], labels[5], labels[6], labels[7], labels[0], labels[1], labels[2], labels[3]]
     raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
 
 
@@ -181,6 +204,9 @@ class BuildTsxSheetAction(Action):
         "background_color": {"widget": "color"},
         "foreground_color": {"widget": "color"},
         "wang_transform": {"enum": ["none", "iso45_ccw", "opposite"]},
+        "edge_wang_transform": {"enum": ["", "none", "iso45_ccw", "opposite"]},
+        "corner_wang_transform": {"enum": ["", "none", "iso45_ccw", "iso45_ccw_cw90", "clockwise", "opposite"]},
+        "mixed_wang_transform": {"enum": ["", "none", "iso45_ccw", "opposite"]},
     }
 
 
@@ -211,6 +237,9 @@ class BuildTsxSheetAction(Action):
         edge_offset: int = 0,
         corner_offset: int = 16,
         wang_transform: str = "none",
+        edge_wang_transform: str = "",
+        corner_wang_transform: str = "",
+        mixed_wang_transform: str = "",
     ) -> Context:
 
 
@@ -336,6 +365,16 @@ class BuildTsxSheetAction(Action):
                     set_type = str(spec.get("type") or "edge").strip().lower()
                     if set_type not in ("edge", "corner", "mixed"):
                         raise RuntimeError(f"[build_tsx_sheet] 不支持的 wangset type: {set_type}")
+                    set_wang_transform = str(
+                        {
+                            "edge": edge_wang_transform,
+                            "corner": corner_wang_transform,
+                            "mixed": mixed_wang_transform,
+                        }.get(set_type, "")
+                        or spec.get("wang_transform")
+                        or wang_transform
+                        or "none"
+                    )
                     terrains = spec.get("terrains") or []
                     tiles = spec.get("tiles") or []
                     icon_tileid = int(spec.get("icon_tileid") or 0)
@@ -357,17 +396,18 @@ class BuildTsxSheetAction(Action):
                         if set_type == "edge":
                             if len(labels) != 4:
                                 raise RuntimeError("[build_tsx_sheet] edge wangset 的 wang 标签必须是 4 个位置")
-                            mapped = _transform_edge_labels(labels, wang_transform)
+                            mapped = _transform_edge_labels(labels, set_wang_transform)
                             wangid = _wang_edge_labels_id(mapped)
                         elif set_type == "corner":
                             if len(labels) != 4:
                                 raise RuntimeError("[build_tsx_sheet] corner wangset 的 wang 标签必须是 4 个位置")
-                            mapped = _transform_corner_labels(labels, wang_transform)
+                            mapped = _transform_corner_labels(labels, set_wang_transform)
                             wangid = _wang_corner_labels_id(mapped)
                         else:
-                            if wang_transform not in ("", "none"):
-                                raise RuntimeError("[build_tsx_sheet] mixed wangset 暂不支持 wang_transform")
-                            wangid = _wang_mixed_labels_id(labels)
+                            if len(labels) != 8:
+                                raise RuntimeError("[build_tsx_sheet] mixed wangset 的 wang 标签必须是 8 个位置")
+                            mapped = _transform_mixed_labels(labels, set_wang_transform)
+                            wangid = _wang_mixed_labels_id(mapped)
                         lines.append(
                             f'   <wangtile tileid="{tileid}" wangid="{wangid}"/>'
                         )

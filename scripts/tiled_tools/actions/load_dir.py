@@ -25,11 +25,14 @@ from ..core.action import Action, Context
 from ..core.registry import register
 
 
+_TILED_FILE_SUFFIXES = {".tmx", ".tmj", ".tsx", ".tsj", ".tiled-project", ".world"}
+
+
 @register("load_dir")
 class LoadDirAction(Action):
     description = "从目录批量加载图片到 ctx.extras['tiles']（按文件名排序）"
     param_hints = {
-        "path": {"widget": "filepath"},
+        "path": {"widget": "dirpath"},
         "limit": {"min": 0, "max": 256, "step": 1},
     }
 
@@ -44,6 +47,14 @@ class LoadDirAction(Action):
         d = Path(str(path)).expanduser()
         if not d.is_absolute():
             d = (Path.cwd() / d).resolve()
+        if not d.is_dir() and d.suffix.lower() in _TILED_FILE_SUFFIXES:
+            raise ValueError(
+                f"[load_dir] 需要的是 terrain 图片目录，不是 Tiled 文件: {d}\n"
+                "请把 path/terrain_dir 填为包含基础 terrain PNG 的文件夹；"
+                ".tmx/.tmj 地图文件请使用 map/remap 类 workflow。"
+            )
+        if d.is_file():
+            raise ValueError(f"[load_dir] 需要目录路径，但收到文件: {d}")
         if not d.is_dir():
             raise FileNotFoundError(f"[load_dir] 目录不存在: {d}")
 

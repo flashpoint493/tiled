@@ -1,0 +1,71 @@
+name: project_color_merge_iso45
+project_only: true
+description: |
+  项目专用标准流程：Color Merge + ISO45 Matrix。
+
+  用途：
+    - 从多个四方连续基础 terrain 贴图生成多地形 Wang 规则集。
+    - 同时输出 Edge Set / Corner Set / Mixed Set。
+    - 将生成结果统一转换为 iso45 cell，并写入可直接在 Tiled 中使用的 .tsx。
+
+  输入：
+    - terrain_dir：基础 terrain 贴图目录，每个文件代表一种 terrain，文件名排序即 terrain 顺序；不要填写 .tmx/.tmj 地图文件。
+    - tile_width / tile_height：基础贴图标准化尺寸，默认 256x256，适配当前项目素材。
+    - spec：最终 iso45 cell 规格，默认 256，即 Tiled grid 为 256x128。
+
+  输出：
+    - iso45 matrix sprite sheet PNG。
+    - 带 edge_set / corner_set / mixed_set 的 Tiled .tsx。
+    - mode=all 时只生成一批共享 tile，同一个 tile ID 同时写入 edge_set / corner_set / mixed_set。
+    - Corner Set 只旋转 Wang 规则绘制方向，不旋转 tile 图像。
+
+steps:
+  - action: load_dir
+    params:
+      path: ${terrain_dir}
+      pattern: ${pattern:*}
+      sort: true
+      limit: 0
+
+  - action: multi_terrain_wang_set
+    params:
+      mode: ${mode:all}
+      half_extent: ${half_extent:0.5}
+      resample: ${resample:bicubic}
+      expected: ${expected:0}
+      tile_width: ${tile_width:256}
+      tile_height: ${tile_height:256}
+      edge_wangset_name: ${edge_wangset_name:edge_set}
+      corner_wangset_name: ${corner_wangset_name:corner_set}
+      mixed_wangset_name: ${mixed_wangset_name:mixed_set}
+
+  - action: iso45_tile_spec
+    params:
+      preset: ${spec:256}
+
+  - action: for_each
+    params:
+      source: tiles
+      steps:
+        - action: iso45_fit_tile
+          params:
+            preset: context
+            anchor: ${anchor:center}
+            resample: ${iso_resample:bicubic}
+            background: [0, 0, 0, 0]
+
+  - action: pack_sheet
+    params:
+      columns: ${columns:24}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      path: ${output:auto}
+
+  - action: build_tsx_sheet
+    params:
+      path: ${tsx:auto}
+      name: ${name:project_color_merge_iso45}
+      tile_names: true
+      terrain_spec: context
+      wang_transform: iso45_ccw
+      corner_wang_transform: ${corner_wang_transform:clockwise}

@@ -1,17 +1,17 @@
 name: multi_tiletype_corner_set_iso45_matrix
 description: |
-  从 3 张或更多四方连续基础 terrain 贴图生成一个多 terrain 的 Isometric Matrix 45° Edge Set + Corner Set tileset。
+  从 3 张或更多四方连续基础 terrain 贴图生成一个多 terrain 的 Isometric Matrix 45° Edge Set + Corner Set + Mixed Set tileset。
 
   输入：
     - terrain_dir：目录，里面每个文件是一种基础地形（grass / sand / water / rock ...）。
       文件名排序即 terrain 顺序，也会作为默认 terrain 名称。
     - tile_width / tile_height：先把每张基础 terrain 标准化到该 topdown 尺寸；默认 64x64。
-    - spec：最终 iso45 cell 规格；默认 128，即 tileset cell 为 128x128，Tiled isometric grid 为 128x64。
+    - spec：最终 iso45 cell 规格；默认 256，即 tileset cell 为 256x256，Tiled isometric grid 为 256x128。
 
   输出：
-    - N^4 张 Edge Set tile（顺序 N/E/S/W，经 iso45_ccw 转换为 Tiled isometric 方向）
-    - N^4 张 Corner Set tile（Tiled 原生顺序 TR/BR/BL/TL，经 iso45_ccw 转换为 Tiled isometric 方向）
-    - 共 2 * N^4 张 tile，自动 pack 成 iso45 matrix sheet，并写入带 isometric grid/tileoffset 的 .tsx。
+    - mode=all 时生成 N^4 张共享 tile（每张图案只出现一次）。
+    - 同一个 tile ID 同时写入 Edge Set（N/E/S/W，经 iso45_ccw 转换为 Tiled isometric 方向）、Corner Set（TR/BR/BL/TL；tile 图像不额外旋转，仅将规则绘制方向顺时针旋转 90°）和 Mixed Set（完整 8 段 wangid）。
+    - 自动 pack 成 iso45 matrix sheet，并写入带 isometric grid/tileoffset 的 .tsx。
 
   Tiled 建议：
     - Map Orientation = Isometric
@@ -28,7 +28,7 @@ steps:
 
   - action: multi_terrain_wang_set
     params:
-      mode: both
+      mode: ${mode:all}
       half_extent: ${half_extent:0.5}
       resample: ${resample:nearest}
       expected: ${expected:0}
@@ -36,10 +36,11 @@ steps:
       tile_height: ${tile_height:64}
       edge_wangset_name: ${edge_wangset_name:edge_set}
       corner_wangset_name: ${corner_wangset_name:corner_set}
+      mixed_wangset_name: ${mixed_wangset_name:mixed_set}
 
   - action: iso45_tile_spec
     params:
-      preset: ${spec:128}
+      preset: ${spec:256}
 
   - action: for_each
     params:
@@ -66,3 +67,4 @@ steps:
       tile_names: true
       terrain_spec: context
       wang_transform: iso45_ccw
+      corner_wang_transform: ${corner_wang_transform:clockwise}

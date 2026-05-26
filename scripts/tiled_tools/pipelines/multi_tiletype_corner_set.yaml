@@ -9,14 +9,13 @@ description: |
       如需沿用原图最大尺寸，可传 0 或 auto。
 
   输出：
-    - N^4 张 Edge Set tile（顺序 N/E/S/W）
-    - N^4 张 Corner Set tile（Tiled 顺序 TR/BR/BL/TL）
-    - N^4 张紧凑 Mixed Set tile（完整 8 段 wangid，图像复用 corner 形状）
-    - 共 3 * N^4 张 tile，自动 pack 成 sheet，并写入包含 N 个 terrain 的 Tiled wangsets。
+    - mode=all 时生成 N^4 张共享 tile（每张图案只出现一次）。
+    - 同一个 tile ID 同时写入 Edge Set（N/E/S/W）、Corner Set（TR/BR/BL/TL）和 Mixed Set（完整 8 段 wangid）。
+    - 自动 pack 成 sheet，并写入包含 N 个 terrain 的 Tiled wangsets。
 
   例子：
-    - 3 种地形：3^4 = 81；edge+corner+mixed 共 243 张
-    - 4 种地形：4^4 = 256；edge+corner+mixed 共 768 张
+    - 3 种地形：3^4 = 81；edge+corner+mixed 共用这 81 张 tile
+    - 4 种地形：4^4 = 256；edge+corner+mixed 共用这 256 张 tile
 
   注意：
     - 地形数量越多，sheet 会迅速变大；3 种最实用，4 种开始更适合分主题拆多个 tileset。
