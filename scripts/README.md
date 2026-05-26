@@ -77,6 +77,7 @@ pip install -r requirements.txt
 | `load_dir` | 从目录批量读图到 `ctx.extras["tiles"]`（读美术蒙版用） |
 | `gen_default_masks` | 生成 16 张 wang 2-edge 几何蒙版（过渡素材起稿） |
 | `mask_blend_set` | 用 16 张蒙版混合两张底图 → 16 张 wang 2-edge tile |
+| `multi_terrain_wang_set` | 从 3+ 张四方连续基础 terrain 生成 scene-source shared tile，并写入 edge/corner/mixed WangSet 元数据 |
 | `wang_2edge_compose_map` | 按边匹配 code 矩阵把 16 张 wang tile 拼成完整预览地图 |
 | `make_seamless` | 把任意图片变成四方连续（tileable） |
 
@@ -114,6 +115,8 @@ python -m tiled_tools serve --port 8765
    - `topdown_to_iso`：单图直接 iso 化。
    - `3x3_split_then_iso`：3×3 循环 tile → 拆 9 张 → 每张 iso → 批量保存。
    - `batch_images_to_tilesheet`：目录/批量图片 → sheet + `.tsx`。
+   - `multi_tiletype_corner_set` / `multi_tiletype_corner_set_iso45_matrix`：多 terrain scene-source sheet + edge/corner/mixed `.tsx`。
+   - `project_color_merge_iso45`：项目专用流程，一次生成 topdown authoring 源图和 iso45 Tiled 版本。
 4. 点「▶ 运行」或按 `Ctrl+Enter`。产物在右下，可下载。
 
 

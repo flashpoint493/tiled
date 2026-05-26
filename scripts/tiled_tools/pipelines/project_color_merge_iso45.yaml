@@ -7,6 +7,7 @@ description: |
     - 从多个四方连续基础 terrain 贴图生成多地形 Wang 规则集。
     - 同时输出 Edge Set / Corner Set / Mixed Set。
     - 将生成结果统一转换为 iso45 cell，并写入可直接在 Tiled 中使用的 .tsx。
+    - 默认使用 terrain_scene_source 布局：2tile 保持成对场景源图，3/4 tile 生成由 Wang corner 约束推导的合法局部场景，sheet 本身就是稳定可采样的 authoring source。
 
   输入：
     - terrain_dir：基础 terrain 贴图目录，每个文件代表一种 terrain，文件名排序即 terrain 顺序；不要填写 .tmx/.tmj 地图文件。
@@ -14,16 +15,17 @@ description: |
     - spec：最终 iso45 cell 规格，默认 256，即 Tiled grid 为 256x128。
 
   输出：
-    - iso45 matrix sprite sheet PNG。
-    - 带 edge_set / corner_set / mixed_set 的 Tiled .tsx。
-    - mode=all 时只生成一批共享 tile，同一个 tile ID 同时写入 edge_set / corner_set / mixed_set。
+    - topdown scene-source sprite sheet PNG + .tsx，作为美术 authoring / 采样源图。
+    - iso45 scene-source sprite sheet PNG + .tsx，作为 Tiled isometric 使用版本。
+    - 两套 .tsx 都带 edge_set / corner_set / mixed_set；visual_* 场景上下文格只用于 authoring/采样参考，不写入规则集。
+    - mode=all 时只生成一批 canonical tile，同一个 tile ID 同时写入 edge_set / corner_set / mixed_set。
     - Corner Set 只旋转 Wang 规则绘制方向，不旋转 tile 图像。
 
 steps:
   - action: load_dir
     params:
-      path: ${terrain_dir}
-      pattern: ${pattern:*}
+      path: ${terrain_dir:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\Tiles}
+      pattern: ${pattern:*.png}
       sort: true
       limit: 0
 
@@ -35,9 +37,25 @@ steps:
       expected: ${expected:0}
       tile_width: ${tile_width:256}
       tile_height: ${tile_height:256}
+      layout_order: ${layout_order:terrain_scene_source}
+      layout_columns: ${columns:15}
       edge_wangset_name: ${edge_wangset_name:edge_set}
       corner_wangset_name: ${corner_wangset_name:corner_set}
       mixed_wangset_name: ${mixed_wangset_name:mixed_set}
+
+  - action: pack_sheet
+    params:
+      columns: ${columns:15}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      path: ${topdown_output:topdown_scene_source.png}
+
+  - action: build_tsx_sheet
+    params:
+      path: ${topdown_tsx:auto}
+      name: ${topdown_name:project_color_merge_topdown}
+      tile_names: true
+      wang_transform: none
 
   - action: iso45_tile_spec
     params:
@@ -56,7 +74,7 @@ steps:
 
   - action: pack_sheet
     params:
-      columns: ${columns:24}
+      columns: ${columns:15}
       spacing: ${spacing:0}
       margin: ${margin:0}
       path: ${output:auto}

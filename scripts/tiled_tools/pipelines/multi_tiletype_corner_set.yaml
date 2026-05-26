@@ -37,13 +37,15 @@ steps:
       expected: ${expected:0}
       tile_width: ${tile_width:64}
       tile_height: ${tile_height:64}
+      layout_order: ${layout_order:terrain_scene_source}
+      layout_columns: ${columns:15}
       edge_wangset_name: ${edge_wangset_name:edge_set}
       corner_wangset_name: ${corner_wangset_name:corner_set}
       mixed_wangset_name: ${mixed_wangset_name:mixed_set}
 
   - action: pack_sheet
     params:
-      columns: ${columns:18}
+      columns: ${columns:15}
       spacing: ${spacing:0}
       margin: ${margin:0}
       path: ${output:auto}
