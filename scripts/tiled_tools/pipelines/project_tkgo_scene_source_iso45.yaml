@@ -1,0 +1,104 @@
+name: project_tkgo_scene_source_iso45
+project_only: true
+description: |
+  TKGO 项目专属三步流程：Tiles -> scene-source topdown -> scene-source iso45 -> iso45 TMJ。
+
+  默认输入：
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\Tiles
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90.tmj
+
+  默认输出：
+    - Tileset_origin_04/TileSheet/scene_source_topdown.png
+    - Tileset_origin_04/TileSheet/scene_source_topdown.tsx
+    - Tileset_origin_04/TileSheet/scene_source_iso45.png
+    - Tileset_origin_04/TileSheet/scene_source_iso45.tsx
+    - tm_07_90_iso45.tmj
+
+  约定：
+    - 使用 terrain_scene_source 布局。
+    - WangSet 只引用 canonical shared tile；visual_* tile 只作为 authoring/采样参考。
+    - 地图转换使用 gid_remap=iso45_cw，即 shared_TR_BR_BL_TL -> shared_TL_TR_BR_BL。
+
+steps:
+  - action: load_dir
+    params:
+      path: ${terrain_dir:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\Tiles}
+      pattern: ${pattern:*.png}
+      sort: true
+      limit: 0
+
+  - action: multi_terrain_wang_set
+    params:
+      mode: ${mode:all}
+      half_extent: ${half_extent:0.5}
+      resample: ${resample:nearest}
+      expected: ${expected:0}
+      tile_width: ${tile_width:256}
+      tile_height: ${tile_height:256}
+      layout_order: ${layout_order:terrain_scene_source}
+      layout_columns: ${columns:15}
+      edge_wangset_name: ${edge_wangset_name:edge_set}
+      corner_wangset_name: ${corner_wangset_name:corner_set}
+      mixed_wangset_name: ${mixed_wangset_name:mixed_set}
+
+  - action: pack_sheet
+    params:
+      columns: ${columns:15}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      path: ${topdown_output:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_topdown.png}
+
+  - action: build_tsx_sheet
+    params:
+      path: ${topdown_tsx:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_topdown.tsx}
+      name: ${topdown_name:scene_source_topdown}
+      tile_names: true
+      wang_transform: none
+
+  - action: iso45_tile_spec
+    params:
+      preset: ${spec:256}
+
+  - action: for_each
+    params:
+      source: tiles
+      steps:
+        - action: iso45_fit_tile
+          params:
+            preset: context
+            anchor: ${anchor:center}
+            resample: ${iso_resample:bicubic}
+            background: [0, 0, 0, 0]
+
+  - action: pack_sheet
+    params:
+      columns: ${columns:15}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      path: ${iso45_output:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45.png}
+
+  - action: build_tsx_sheet
+    params:
+      path: ${iso45_tsx:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45.tsx}
+      name: ${iso45_name:scene_source_iso45}
+      tile_names: true
+      terrain_spec: context
+      wang_transform: iso45_ccw
+      corner_wang_transform: ${corner_wang_transform:iso45_ccw}
+
+  - action: convert_tmj_topdown_to_iso45
+    params:
+      map_path: ${map_path:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90.tmj}
+      target_tileset: ${target_tileset:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45.tsx}
+      output: ${map_output:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90_iso45.tmj}
+      source_tileset: ${source_tileset:auto}
+      orientation: isometric
+      renderorder: ${renderorder:right-down}
+      map_tile_width: ${map_tile_width:}
+      map_tile_height: ${map_tile_height:}
+      tiledversion: ${map_tiledversion:}
+      check_tile_names: ${check_tile_names:true}
+      strict_tile_names: ${strict_tile_names:true}
+      gid_remap: ${gid_remap:iso45_cw}
+      gid_remap_wangset: ${gid_remap_wangset:mixed_set}
+      indent: ${map_indent:1}

@@ -36,7 +36,7 @@ python -m tiled_tools serve --port 8765
 - 中：当前 pipeline（拖拽排序）
 - 右：原图 / 产物预览 + 日志
 
-顶栏 workflow 下拉里有 17 个内置 workflow（见下文表格），开箱即用；顶栏「批量导入」可一次选择多张图片并自动生成 sheet + `.tsx`。
+顶栏 workflow 下拉里有内置 workflow（见下文表格），开箱即用；顶栏「批量导入」可一次选择多张图片并自动生成 sheet + `.tsx`。
 
 
 
@@ -79,18 +79,68 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 
 | `wang_2edge_corner_set_iso_terrain` | 同时生成完整 Edge Set + Corner Set：前 16 格 edge，后 16 格 corner，并在 `.tsx` 自动写两个 wangset；同样支持规格下拉 | 1 PNG + 1 TSX |
 
-
 | `wang_2edge_big_iso` | 按边匹配矩阵拼完整 3×3 平面地图，再把整张图整体 iso 45° 化（默认 `lake3`，反转外围 8 格方向，四角都是拐角过渡 tile；不是 0..15 lookup sheet） | 平面图 + 1 PNG |
 
-
-
-
-
-
+| `convert_tmj_topdown_to_iso45` | 已绘制 topdown `.tmj` → iso45 `.tmj`；更新 map metadata、tileset source，并可选做 `gid_remap=iso45_cw` / `edge_canonical` | 1 TMJ |
+| `project_color_merge_iso45` | TKGO 项目专用：从 `Tileset_origin_04/Tiles` 生成 topdown scene-source 和 iso45 scene-source 两套 `.png/.tsx` | 2 PNG + 2 TSX |
+| `project_tkgo_scene_source_iso45` | TKGO 项目专用：在 `project_color_merge_iso45` 的 tileset 链路后继续转换 `tm_07_90.tmj` | 2 PNG + 2 TSX + 1 TMJ |
+| `project_tkgo_beauti_sheet_iso45_png` | TKGO 项目专用：美术重绘后的 `scene_source_topdown_beauti.png` → `scene_source_iso45_beauti.png` | 1 PNG |
+| `project_tkgo_beauti_iso45_tsx` | TKGO 项目专用：从 canonical `scene_source_iso45.tsx` 派生美术版 TSX，保留 WangSet / tile name | 1 TSX |
+| `project_tkgo_beauti_tmj_iso45` | TKGO 项目专用：`tm_07_90.tmj` → 使用 beauti TSX 的 `tm_07_90_iso45_beauti.tmj` | 1 TMJ |
 
 **最常用是第三个**——一条命令把 auto-tile 素材完全做成 Tiled 可打开的形态。
 
-## Action 速查（23 个）
+### Project-only：TKGO scene-source iso45
+
+当前 TKGO terrain 工作流基于 `layout_order=terrain_scene_source`：`visual_*` tile 只用于 authoring / sampling，不写入 WangSet；`edge_set` / `corner_set` / `mixed_set` 只引用 canonical `shared_*` tile。`project_tkgo_scene_source_iso45` 固化了默认路径和当前 `tm_07_90.tmj` 转换，可以作为回归流程直接运行：
+
+```powershell
+cd D:\Github\tiled\scripts
+python -m tiled_tools run project_tkgo_scene_source_iso45
+```
+
+```mermaid
+flowchart TD
+    A[Tileset_origin_04/Tiles/*.png] --> B[multi_terrain_wang_set\nterrain_scene_source]
+    B --> C[scene_source_topdown.png/.tsx]
+    B --> D[iso45_fit_tile + scene_source_iso45.png/.tsx]
+    E[tm_07_90.tmj] --> F[convert_tmj_topdown_to_iso45\ngid_remap=iso45_cw]
+    D --> F
+    F --> G[tm_07_90_iso45.tmj]
+```
+
+When converting an already painted map, do **not** only rewrite `orientation` / `tilewidth` / `tileheight`. For TKGO scene-source tilesets, use `gid_remap=iso45_cw`, which maps tile-name corner semantics as:
+
+```text
+shared_TR_BR_BL_TL -> shared_TL_TR_BR_BL
+```
+
+This preserves the painted terrain directions after switching the map to the iso45 tileset.
+
+For a beauti sheet repainted from `scene_source_topdown.png`, do not rebuild terrain combinations. Use the three short project workflows instead:
+
+```powershell
+cd D:\Github\tiled\scripts
+python -m tiled_tools run project_tkgo_beauti_sheet_iso45_png
+python -m tiled_tools run project_tkgo_beauti_iso45_tsx
+python -m tiled_tools run project_tkgo_beauti_tmj_iso45
+```
+
+```mermaid
+flowchart TD
+    A[scene_source_topdown_beauti.png] --> B[project_tkgo_beauti_sheet_iso45_png]
+    B --> C[scene_source_iso45_beauti.png]
+    D[scene_source_iso45.tsx] --> E[project_tkgo_beauti_iso45_tsx]
+    C --> E
+    E --> F[scene_source_iso45_beauti.tsx]
+    G[tm_07_90.tmj] --> H[project_tkgo_beauti_tmj_iso45]
+    F --> H
+    H --> I[tm_07_90_iso45_beauti.tmj]
+```
+
+`project_tkgo_beauti_sheet_iso45_png` defaults to `tile_count=1227` and `columns=15`. `project_tkgo_beauti_iso45_tsx` rewrites only the tileset name and image metadata, keeping `edge_set` / `corner_set` / `mixed_set` and tile names untouched.
+
+## Action 速查（24 个）
 
 
 | Action | 输入 | 输出 | 主要参数 |
@@ -112,6 +162,7 @@ python -m tiled_tools do scale --param sx=2 --param sy=2  # 单步跑
 | `for_each` | `ctx.extras["tiles"]` | 批量处理后的 tiles | `source`, `steps`（子 pipeline） |
 | `pack_sheet` | `ctx.extras["tiles"]` | sprite sheet PNG + sheet 元数据 | `columns`, `spacing`, `margin`, `tile_w`, `tile_h`, `pad_anchor` |
 | `build_tsx_sheet` | `ctx.extras["sheet"]` | Tiled `.tsx` | `name`, `tile_names`（是否写 NW/N/... 命名属性） |
+| `derive_tsx_image` | 已有 `.tsx` + 新 image | 派生 `.tsx` | `source_tsx`, `image_source`, `image_path`, `name`（只替换 tileset/image metadata，保留 WangSet / tile name） |
 | `tile_repeat` | `ctx.image` | 平铺后的大图 | `cols=3`, `rows=3`, `count`（覆盖 cols/rows）, `gap`, `background`（单图 N×M 复制：验证循环 / 铺地预览） |
 | `make_seamless` | `ctx.image` | 四方连续贴图 | `method`, `overlap`, `blur_radius`, `blur_band`（把任意图片变 tileable） |
 

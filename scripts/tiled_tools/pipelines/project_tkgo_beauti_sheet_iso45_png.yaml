@@ -1,0 +1,42 @@
+name: project_tkgo_beauti_sheet_iso45_png
+project_only: true
+description: |
+  TKGO 项目专属步骤 1：把美术重绘后的 scene_source topdown sheet 转成 iso45 PNG。
+
+  默认输入：
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_topdown_beauti.png
+
+  默认输出：
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.png
+
+  约定：
+    - 输入 sheet 必须和 scene_source_topdown.png 保持同样网格、列数和 tile id 顺序。
+    - 默认 tile_count=1227，对齐 scene_source_iso45.tsx，避免最后一行空位被当成有效 tile。
+
+steps:
+  - action: load
+    params:
+      path: ${input:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_topdown_beauti.png}
+
+  - action: tileset_to_iso45_matrix
+    params:
+      tile_width: ${tile_width:256}
+      tile_height: ${tile_height:256}
+      columns: ${columns:15}
+      tile_count: ${tile_count:1227}
+      spacing: ${spacing:0}
+      margin: ${margin:0}
+      output_columns: ${output_columns:15}
+      preset: ${spec:256}
+      cell_size: ${cell_size:0}
+      cell_width: ${cell_width:0}
+      cell_height: ${cell_height:0}
+      footprint_width: ${footprint_width:0}
+      footprint_height: ${footprint_height:0}
+      anchor: ${anchor:center}
+      resample: ${resample:bicubic}
+
+  - action: save
+    params:
+      path: ${output:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.png}
+      format: PNG

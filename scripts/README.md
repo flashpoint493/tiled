@@ -39,6 +39,32 @@ pip install -e .
 pip install -r requirements.txt
 ```
 
+## 打包给美术使用
+
+可以把 `scripts/` 工具链独立打成 zip 发给美术。zip 不包含本地运行产物、虚拟环境、缓存或示例输出，只保留源码、内置 workflow、Web UI、文档和启动脚本。
+
+打包命令：
+
+```powershell
+cd D:\Github\tiled\scripts
+powershell -ExecutionPolicy Bypass -File .\package_for_artists.ps1
+```
+
+默认输出：
+
+```text
+scripts/dist/tiled_tools_artist_pack.zip
+```
+
+美术使用方式：
+
+1. 解压 `tiled_tools_artist_pack.zip`。
+2. 双击 `start_tiled_tools_web.bat`。
+3. 第一次启动会在解压目录创建 `.venv` 并安装依赖；之后会直接复用。
+4. 浏览器会自动打开本地 Web 页面，默认是 `http://127.0.0.1:8765/`；如果 `8765` 被占用，启动脚本会自动尝试 `8766`、`8767` 等后续端口，并打开实际可用端口。
+
+前置条件：Windows 上已安装 **Python 3.10+**，并且安装 Python 时勾选了 **Add python.exe to PATH**。运行时上传和输出文件会写到解压目录下的 `.tiled_tools_runtime/`。
+
 ## 设计理念：Action + Pipeline
 
 * **Action**：一个原子操作，例如「正方化画布」「旋转 45°」「按比例缩放」。
@@ -73,6 +99,7 @@ pip install -r requirements.txt
 | `for_each` | 对上一步产出的多张图批量执行子 pipeline |
 | `pack_sheet` | 把 `ctx.extras["tiles"]` 拼成单张 sprite sheet PNG（Tiled 友好） |
 | `build_tsx_sheet` | 基于 pack_sheet 的 sheet 生成 Tiled `.tsx`（Based on Tileset Image） |
+| `derive_tsx_image` | 从已有 `.tsx` 派生新 `.tsx`，只替换 tileset 名称和 image source/size，保留 WangSet / tile name |
 | `tile_repeat` | 把单张贴图按 N×M 网格平铺成一张大图（验证循环 / 铺地预览） |
 | `load_dir` | 从目录批量读图到 `ctx.extras["tiles"]`（读美术蒙版用） |
 | `gen_default_masks` | 生成 16 张 wang 2-edge 几何蒙版（过渡素材起稿） |
@@ -117,8 +144,70 @@ python -m tiled_tools serve --port 8765
    - `batch_images_to_tilesheet`：目录/批量图片 → sheet + `.tsx`。
    - `multi_tiletype_corner_set` / `multi_tiletype_corner_set_iso45_matrix`：多 terrain scene-source sheet + edge/corner/mixed `.tsx`。
    - `project_color_merge_iso45`：项目专用流程，一次生成 topdown authoring 源图和 iso45 Tiled 版本。
+   - `project_tkgo_scene_source_iso45`：TKGO 专用一键流程，生成 topdown/iso45 scene-source tileset，并把 `tm_07_90.tmj` 转成 `tm_07_90_iso45.tmj`。
+   - `project_tkgo_beauti_sheet_iso45_png` / `project_tkgo_beauti_iso45_tsx` / `project_tkgo_beauti_tmj_iso45`：TKGO 美术重绘 sheet 的三段式复用流程。
 4. 点「▶ 运行」或按 `Ctrl+Enter`。产物在右下，可下载。
 
+### 项目专属 workflow：TKGO scene-source iso45
+
+`project_*` workflow 是带有当前项目路径和约定的固化流程，Web 下拉中会显示为“项目专用”。当前 TKGO 相关 workflow：
+
+| Workflow | 用途 | 适用场景 |
+| --- | --- | --- |
+| `project_color_merge_iso45` | 从 `Tileset_origin_04\Tiles` 生成 topdown scene-source 和 iso45 scene-source 两套 `.png/.tsx` | 只需要刷新 tileset，或想覆盖输出路径做变体 |
+| `project_tkgo_scene_source_iso45` | 在上一步基础上继续把 `tm_07_90.tmj` 转为 `tm_07_90_iso45.tmj` | 当前 TKGO 地图的一键复现 / 回归流程 |
+| `project_tkgo_beauti_sheet_iso45_png` | 把 `scene_source_topdown_beauti.png` 逐格转成 `scene_source_iso45_beauti.png` | 美术基于 topdown sheet 重绘后，只刷新 iso45 PNG |
+| `project_tkgo_beauti_iso45_tsx` | 从 `scene_source_iso45.tsx` 派生 `scene_source_iso45_beauti.tsx` | 复用原 WangSet / tile name，只切换 image 引用 |
+| `project_tkgo_beauti_tmj_iso45` | 把 `tm_07_90.tmj` 转成引用 beauti tileset 的 `tm_07_90_iso45_beauti.tmj` | 用美术版 tileset 预览已绘制地图 |
+
+默认上下文：
+
+```text
+terrain_dir = D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\Tiles
+map_path    = D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90.tmj
+```
+
+一键运行：
+
+```powershell
+cd D:\Github\tiled\scripts
+python -m tiled_tools run project_tkgo_scene_source_iso45
+```
+
+产物关系：
+
+```mermaid
+flowchart TD
+    A[Tileset_origin_04/Tiles/*.png] --> B[terrain_scene_source layout]
+    B --> C[scene_source_topdown.png/.tsx]
+    B --> D[scene_source_iso45.png/.tsx]
+    E[tm_07_90.tmj] --> F[convert_tmj_topdown_to_iso45]
+    D --> F
+    F --> G[tm_07_90_iso45.tmj]
+```
+
+美术重绘后的 `scene_source_topdown_beauti.png` 不应重新生成 terrain 组合，而是走三段式复用流程：
+
+```powershell
+cd D:\Github\tiled\scripts
+python -m tiled_tools run project_tkgo_beauti_sheet_iso45_png
+python -m tiled_tools run project_tkgo_beauti_iso45_tsx
+python -m tiled_tools run project_tkgo_beauti_tmj_iso45
+```
+
+```mermaid
+flowchart TD
+    A[scene_source_topdown_beauti.png] --> B[project_tkgo_beauti_sheet_iso45_png]
+    B --> C[scene_source_iso45_beauti.png]
+    D[scene_source_iso45.tsx] --> E[project_tkgo_beauti_iso45_tsx]
+    C --> E
+    E --> F[scene_source_iso45_beauti.tsx]
+    G[tm_07_90.tmj] --> H[project_tkgo_beauti_tmj_iso45]
+    F --> H
+    H --> I[tm_07_90_iso45_beauti.tmj]
+```
+
+`project_tkgo_scene_source_iso45` 和 `project_tkgo_beauti_tmj_iso45` 的地图转换阶段默认使用 `gid_remap=iso45_cw`。这一步会把已绘制 tile 的四角 terrain 语义从 `shared_TR_BR_BL_TL` 重映射为 `shared_TL_TR_BR_BL`，所以不要用手工只改 `.tmj` metadata 的方式替代它。
 
 ### 合成 sprite sheet + Tiled tsx
 

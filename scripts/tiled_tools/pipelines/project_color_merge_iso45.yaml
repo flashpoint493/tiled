@@ -86,4 +86,21 @@ steps:
       tile_names: true
       terrain_spec: context
       wang_transform: iso45_ccw
-      corner_wang_transform: ${corner_wang_transform:clockwise}
+      corner_wang_transform: ${corner_wang_transform:iso45_ccw}
+
+  - action: convert_tmj_topdown_to_iso45
+    params:
+      map_path: ${map_path:}
+      target_tileset: ${target_tileset:context}
+      output: ${map_output:auto}
+      source_tileset: ${source_tileset:auto}
+      orientation: isometric
+      renderorder: ${renderorder:right-down}
+      map_tile_width: ${map_tile_width:}
+      map_tile_height: ${map_tile_height:}
+      tiledversion: ${map_tiledversion:}
+      check_tile_names: ${check_tile_names:true}
+      strict_tile_names: ${strict_tile_names:true}
+      gid_remap: ${gid_remap:none}
+      gid_remap_wangset: ${gid_remap_wangset:edge_set}
+      indent: ${map_indent:1}

@@ -1497,9 +1497,28 @@ class MultiTerrainWangSetAction(Action):
             return tileid
 
         if mode == "all":
-            edge_entries: List[Dict[str, Any]] = []
+            edge_entries_by_wang: Dict[Tuple[int, ...], Dict[str, Any]] = {}
             corner_entries: List[Dict[str, Any]] = []
             mixed_entries: List[Dict[str, Any]] = []
+
+            def edge_fit_score(labels: Sequence[int], edge_labels: Sequence[int]) -> Tuple[int, int, int, Tuple[int, ...]]:
+                """Prefer the corner tile whose visible corners best satisfy an edge wang rule."""
+                tr, br, bl, tl = [int(x) for x in labels]
+                top, right, bottom, left = [int(x) for x in edge_labels]
+                edge_values = {top, right, bottom, left}
+                mismatch = sum([
+                    tr != top,
+                    tr != right,
+                    br != right,
+                    br != bottom,
+                    bl != bottom,
+                    bl != left,
+                    tl != left,
+                    tl != top,
+                ])
+                foreign = sum(1 for value in (tr, br, bl, tl) if value not in edge_values)
+                return (mismatch, foreign, len(set((tr, br, bl, tl))), (tr, br, bl, tl))
+
             for idx, labels_tuple in enumerate(combos):
                 labels = list(labels_tuple)
                 weights = _corner_weights(labels, width, height, terrain_count)
@@ -1509,19 +1528,32 @@ class MultiTerrainWangSetAction(Action):
                     "shared",
                     labels,
                 )
-                edge_entries.append({"tileid": tileid, "wang": _edge_labels_from_corners(labels)})
+                edge_labels = _edge_labels_from_corners(labels)
+                edge_key = tuple(edge_labels)
+                edge_score = edge_fit_score(labels, edge_labels)
+                current_edge = edge_entries_by_wang.get(edge_key)
+                if current_edge is None or edge_score < current_edge["score"]:
+                    edge_entries_by_wang[edge_key] = {
+                        "tileid": tileid,
+                        "wang": edge_labels,
+                        "score": edge_score,
+                    }
                 corner_entries.append({"tileid": tileid, "wang": labels})
                 mixed_entries.append({
                     "tileid": tileid,
                     "wang": _mixed_labels_from_corners(labels),
                 })
+            edge_entries = [
+                {"tileid": entry["tileid"], "wang": entry["wang"]}
+                for entry in edge_entries_by_wang.values()
+            ]
             wang_multisets.extend([
                 {
-                    "name": edge_wangset_name,
-                    "type": "edge",
+                    "name": mixed_wangset_name,
+                    "type": "mixed",
                     "icon_tileid": 0,
                     "terrains": terrain_defs(0),
-                    "tiles": edge_entries,
+                    "tiles": mixed_entries,
                 },
                 {
                     "name": corner_wangset_name,
@@ -1531,11 +1563,11 @@ class MultiTerrainWangSetAction(Action):
                     "tiles": corner_entries,
                 },
                 {
-                    "name": mixed_wangset_name,
-                    "type": "mixed",
+                    "name": edge_wangset_name,
+                    "type": "edge",
                     "icon_tileid": 0,
                     "terrains": terrain_defs(0),
-                    "tiles": mixed_entries,
+                    "tiles": edge_entries,
                 },
             ])
             offset = len(combos)

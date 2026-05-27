@@ -1,6 +1,6 @@
 # Action 速查
 
-> 当前共 **23 个 action**。每个都是单一职责的"算子"，可任意串联。
+> 当前共 **26 个 action**。每个都是单一职责的"算子"，可任意串联。
 
 >
 > 命名约定：动词在前，`_` 分隔；处理多张图的 action 名字里通常含 `_all` / `_set` / `_dir`。
@@ -40,6 +40,18 @@
 | `for_each` | `ctx.extras["tiles"]` | 同上但每张被处理过 | `source=tiles`, `steps`（嵌套子 pipeline） |
 | `pack_sheet` | `ctx.extras["tiles"]` | 1 张 sheet PNG + `ctx.extras["sheet"]` | `columns`, `spacing`, `margin`, `tile_w`, `tile_h` |
 | `build_tsx_sheet` | `ctx.extras["sheet"]` | Tiled `.tsx` | `name`, `tile_names`（是否写方位命名属性） |
+
+## Tiled 结构文件类
+
+| Action | 输入 | 输出 | 主要参数 |
+| --- | --- | --- | --- |
+| `derive_tsx_image` | 已有 `.tsx` + 新 image | 派生 `.tsx` | `source_tsx`, `output`, `name`, `image_source`, `image_path` |
+| `brush_remap_tsx` | runtime tileset + brush variants tileset | brush `.tsx` + `.remap.json` | `source_tsx`, `variants_tsx`, `output` |
+| `remap_tmj_gids` | `.tmj/.tmx` + `.remap.json` | 替换 GID 后的地图 | `map_path`, `mapping_json`, `output` |
+| `convert_tmj_topdown_to_iso45` | topdown `.tmj` + iso45 `.tsx` | iso45 `.tmj` | `map_path`, `target_tileset`, `gid_remap` |
+| `tileset_to_iso45_matrix` | 已排好的 topdown tileset sheet | tile id 顺序不变的 iso45 sheet | `tile_width`, `tile_height`, `columns`, `tile_count`, `preset` |
+
+`derive_tsx_image` 适合美术重绘同构 sheet 的情况：它只替换 tileset 名称和 `<image>` 元数据，不改 tile name、properties、WangSet。
 
 ## Wang 2-edge / 过渡素材类
 

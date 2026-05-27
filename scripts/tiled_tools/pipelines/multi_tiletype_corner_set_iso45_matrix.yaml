@@ -69,4 +69,4 @@ steps:
       tile_names: true
       terrain_spec: context
       wang_transform: iso45_ccw
-      corner_wang_transform: ${corner_wang_transform:clockwise}
+      corner_wang_transform: ${corner_wang_transform:iso45_ccw}

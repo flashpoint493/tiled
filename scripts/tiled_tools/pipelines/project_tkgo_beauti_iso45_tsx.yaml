@@ -1,0 +1,26 @@
+name: project_tkgo_beauti_iso45_tsx
+project_only: true
+description: |
+  TKGO 项目专属步骤 2：从 canonical scene_source_iso45.tsx 派生美术版 iso45 TSX。
+
+  默认输入：
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45.tsx
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.png
+
+  默认输出：
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.tsx
+
+  约定：
+    - 只替换 tileset name 和 image source/size。
+    - tile id、tile name、properties、edge_set/corner_set/mixed_set 全部保留。
+
+steps:
+  - action: derive_tsx_image
+    params:
+      source_tsx: ${source_tsx:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45.tsx}
+      output: ${output:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.tsx}
+      name: ${name:scene_source_iso45_beauti}
+      image_source: ${image_source:scene_source_iso45_beauti.png}
+      image_path: ${image_path:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.png}
+      image_width: ${image_width:0}
+      image_height: ${image_height:0}

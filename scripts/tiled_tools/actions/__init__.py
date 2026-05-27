@@ -28,7 +28,9 @@ from . import make_seamless  # noqa: F401
 from . import wang_2edge_compose_map  # noqa: F401
 from . import brush_remap_tsx  # noqa: F401
 from . import remap_tmj_gids  # noqa: F401
+from . import convert_tmj_topdown_to_iso45  # noqa: F401
 from . import tileset_to_iso45_matrix  # noqa: F401
+from . import derive_tsx_image  # noqa: F401
 
 
 

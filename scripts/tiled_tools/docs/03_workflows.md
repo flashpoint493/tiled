@@ -1,7 +1,6 @@
 ﻿# Workflow 配方
 
-> 19 个内置 workflow + 经典组合的速查。需要输入/输出截图时，先看 [输入 / 输出案例](05_examples.md)。
-
+> 25 个内置 workflow + 经典组合的速查。需要输入/输出截图时，先看 [输入 / 输出案例](05_examples.md)。
 
 
 ## 内置 workflow
@@ -29,8 +28,14 @@
 | **`wang_2edge_big_iso`** | 2 张底图（沙/水）| 平面 3×3 图 + 1 张完整 iso 大图 | 先拼完整 3×3 图，再整体 iso 化 |
 | `brush_variants_remap_tsx` | runtime tileset + brush variants tileset | brush .tsx + .remap.json | 编辑用 tileset 映射回运行时 tileset |
 | `remap_tmj_gids` | .tmj/.tmx + .remap.json | 替换 GID 后的地图 | Tiled 导出后的 runtime 地图后处理 |
+| `convert_tmj_topdown_to_iso45` | topdown .tmj + iso45 .tsx | iso45 .tmj | 只转换地图 metadata / tileset 引用 / 可选 GID 语义重映射 |
+| `project_color_merge_iso45` | TKGO terrain PNG 目录 | topdown scene-source + iso45 scene-source .png/.tsx | 项目通用 Color Merge + ISO45 成套生成 |
+| `project_tkgo_scene_source_iso45` | TKGO Tiles 目录 + `tm_07_90.tmj` | topdown .tsx + iso45 .tsx + `tm_07_90_iso45.tmj` | TKGO 当前地图的一键复现流程 |
+| `project_tkgo_beauti_sheet_iso45_png` | `scene_source_topdown_beauti.png` | `scene_source_iso45_beauti.png` | 美术重绘整张 topdown sheet 后生成 iso45 PNG |
+| `project_tkgo_beauti_iso45_tsx` | canonical `scene_source_iso45.tsx` + beauti PNG | `scene_source_iso45_beauti.tsx` | 复用 WangSet / tile name，派生美术版 TSX |
+| `project_tkgo_beauti_tmj_iso45` | `tm_07_90.tmj` + beauti TSX | `tm_07_90_iso45_beauti.tmj` | 已绘制 topdown 地图切到美术版 iso45 tileset |
 
-> 图片类 workflow 的实际输入/输出截图见 [输入 / 输出案例](05_examples.md)。`brush_variants_remap_tsx` 和 `remap_tmj_gids` 是结构化 tileset/map 后处理，不适合只用单张 PNG 纹理演示。
+> 图片类 workflow 的实际输入/输出截图见 [输入 / 输出案例](05_examples.md)。`brush_variants_remap_tsx`、`remap_tmj_gids`、`project_tkgo_beauti_iso45_tsx` 和 `project_tkgo_beauti_tmj_iso45` 是结构化 tileset/map 后处理，不适合只用单张 PNG 纹理演示。
 
 ## 经典组合
 
@@ -60,6 +65,17 @@ CLI / 手动 workflow：
 适合一个目录里每张 PNG 都是一种四方连续基础地形的情况，例如 `grass` / `dirt` / `rock` / `water`。文件名排序决定 terrain 顺序；topdown 和 iso45 两次生成必须使用同一目录、同一排序、同一规格，才能保持 tile local id 一致。
 
 默认 `layout_order=terrain_scene_source` 会把 sheet 排成可采样的合法场景源图：2tile 过渡保持成对场景块；3/4 tile 过渡生成由 Wang corner 约束推导的局部场景块。`visual_*` 上下文格只用于美术 authoring / 采样参考，不写入规则集；`.tsx` 只让 canonical shared tile 进入 `edge_set` / `corner_set` / `mixed_set`。
+
+```mermaid
+flowchart LR
+    A[基础 terrain PNG 目录] --> B[multi_terrain_wang_set]
+    B --> C[canonical shared tile]
+    B --> D[visual_* authoring / sampling tile]
+    C --> E[edge_set]
+    C --> F[corner_set]
+    C --> G[mixed_set]
+    D -. 不写入 WangSet .-> H[仅作预览和采样参考]
+```
 
 > 重要：目录里如果会混入下载包、旧输出或 `.tsx`，`load_dir.pattern` 必须写成 `*.png`，不要用 `*`，避免把 `.zip` 等非图片文件当成图片读取。
 
@@ -108,7 +124,130 @@ python -m tiled_tools run project_color_merge_iso45 `
   -v "tsx=$out\Tileset_origin_04_iso45_scene_source.tsx"
 ```
 
-如果已有 topdown 地图要迁移到 iso45：复制地图文件，把地图改为 `orientation=isometric`、`tilewidth=128`、`tileheight=64`，把 tileset source 从 topdown `.tsx` 换成 iso45 `.tsx`，保持 `firstgid` 和 layer `data` 不变。
+#### Project-only workflow：TKGO scene-source iso45
+
+`project_tkgo_scene_source_iso45` 是当前 TKGO `Tileset_origin_04` 的固化流程，用来一键复现从 4 张基础 terrain 到可打开的 iso45 地图产物。它和 `project_color_merge_iso45` 的区别是：后者偏通用，默认只生成两套 tileset；前者把当前地图 `tm_07_90.tmj` 的转换也固定进同一条链路。
+
+```mermaid
+flowchart TD
+    A[Tileset_origin_04/Tiles/*.png] --> B[load_dir]
+    B --> C[multi_terrain_wang_set\nlayout_order=terrain_scene_source]
+    C --> D[pack_sheet]
+    D --> E[scene_source_topdown.png]
+    D --> F[scene_source_topdown.tsx\nedge/corner/mixed WangSet]
+    C --> G[iso45_tile_spec\nspec=256]
+    G --> H[for_each + iso45_fit_tile\nanchor=center]
+    H --> I[pack_sheet]
+    I --> J[scene_source_iso45.png]
+    I --> K[scene_source_iso45.tsx\ngrid=256x128]
+    L[tm_07_90.tmj] --> M[convert_tmj_topdown_to_iso45\ngid_remap=iso45_cw]
+    K --> M
+    M --> N[tm_07_90_iso45.tmj]
+```
+
+默认路径已经写在 `pipelines/project_tkgo_scene_source_iso45.yaml` 中，直接运行：
+
+```powershell
+cd D:\Github\tiled\scripts
+python -m tiled_tools run project_tkgo_scene_source_iso45
+```
+
+默认输入：
+
+```text
+D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\Tiles
+D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90.tmj
+```
+
+默认输出：
+
+```text
+Tileset_origin_04/TileSheet/scene_source_topdown.png
+Tileset_origin_04/TileSheet/scene_source_topdown.tsx
+Tileset_origin_04/TileSheet/scene_source_iso45.png
+Tileset_origin_04/TileSheet/scene_source_iso45.tsx
+tm_07_90_iso45.tmj
+```
+
+地图转换阶段的关键点是 `gid_remap=iso45_cw`。它不是只把 `.tmj` 的 `orientation`、`tilewidth`、`tileheight` 和 tileset source 改掉，而是会按 tile name 里的四角 terrain 语义重映射已绘制 GID：
+
+```text
+shared_TR_BR_BL_TL -> shared_TL_TR_BR_BL
+```
+
+```mermaid
+flowchart LR
+    A[topdown painted GID] --> B[读取 source TSX tile name]
+    B --> C[解析 shared_TR_BR_BL_TL]
+    C --> D[iso45_cw: TL_TR_BR_BL]
+    D --> E[在 target iso45 TSX 中查 tile id]
+    E --> F[写回 layer data / object gid]
+```
+
+这一步保证已经画好的 topdown map 在 iso45 tileset 下仍然使用正确的四角 terrain 方向。成功产物通常应满足：`orientation=isometric`、`renderorder=right-down`、`tilewidth=256`、`tileheight=128`，tileset 指向 `Tileset_origin_04/TileSheet/scene_source_iso45.tsx`。
+
+#### Project-only workflow：TKGO beauti scene-source iso45 三段式
+
+如果美术是基于 `scene_source_topdown.png` 重绘出 `scene_source_topdown_beauti.png`，不要重新从 4 张基础 terrain 生成组合。此时应该复用已经正确的 tile id 顺序和 WangSet 元数据，只替换视觉 sheet：
+
+```mermaid
+flowchart TD
+    A[scene_source_topdown_beauti.png] --> B[project_tkgo_beauti_sheet_iso45_png]
+    B --> C[scene_source_iso45_beauti.png]
+    D[scene_source_iso45.tsx] --> E[project_tkgo_beauti_iso45_tsx]
+    C --> E
+    E --> F[scene_source_iso45_beauti.tsx]
+    G[tm_07_90.tmj] --> H[project_tkgo_beauti_tmj_iso45\ngid_remap=iso45_cw]
+    F --> H
+    H --> I[tm_07_90_iso45_beauti.tmj]
+```
+
+三步分别运行：
+
+```powershell
+cd D:\Github\tiled\scripts
+python -m tiled_tools run project_tkgo_beauti_sheet_iso45_png
+python -m tiled_tools run project_tkgo_beauti_iso45_tsx
+python -m tiled_tools run project_tkgo_beauti_tmj_iso45
+```
+
+默认产物：
+
+```text
+Tileset_origin_04/TileSheet/scene_source_iso45_beauti.png
+Tileset_origin_04/TileSheet/scene_source_iso45_beauti.tsx
+tm_07_90_iso45_beauti.tmj
+```
+
+关键约束：
+
+- `scene_source_topdown_beauti.png` 必须与原 `scene_source_topdown.png` 保持相同尺寸、列数、tile 大小和 tile id 顺序。
+- `project_tkgo_beauti_sheet_iso45_png` 默认 `tile_count=1227`、`columns=15`，对齐 canonical `scene_source_iso45.tsx`。
+- `project_tkgo_beauti_iso45_tsx` 只修改 `tileset.name` 与 `<image source/width/height>`，不改 tile name、properties 或 `edge_set` / `corner_set` / `mixed_set`。
+- `project_tkgo_beauti_tmj_iso45` 仍默认使用 `gid_remap=iso45_cw`，不能用手工只改 metadata 替代。
+
+#### 只转换已有地图：convert_tmj_topdown_to_iso45
+
+如果 topdown / iso45 tileset 已经存在，只想转换地图，使用 `convert_tmj_topdown_to_iso45`：
+
+```powershell
+python -m tiled_tools run convert_tmj_topdown_to_iso45 `
+  -v "map_path=D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90.tmj" `
+  -v "target_tileset=D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45.tsx" `
+  -v "output=D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90_iso45.tmj" `
+  -v gid_remap=iso45_cw `
+  -v gid_remap_wangset=mixed_set
+```
+
+`gid_remap` 常用取值：
+
+| 值 | 用途 |
+| --- | --- |
+| `none` | 只改 metadata 和 tileset 引用，保留 layer data。仅当 topdown / iso45 的 local tile ID 和方向语义完全一致时使用。 |
+| `edge_canonical` | 兼容旧的 duplicated edge WangSet，把同一 edge 候选归一到 canonical tile。 |
+| `iso45_cw` | TKGO scene-source 地图迁移推荐值，按 `shared_TR_BR_BL_TL -> shared_TL_TR_BR_BL` 旋转四角语义。 |
+
+如果已有 topdown 地图要迁移到 iso45：优先走 `convert_tmj_topdown_to_iso45` 或 `project_tkgo_scene_source_iso45`，不要手工只改 `orientation` / `tilewidth` / `tileheight`。手工改 metadata 不会处理已绘制 tile 的四角语义。
 
 完整操作手册见 [输入 / 输出案例](05_examples.md) 的 `multi_tiletype_corner_set` / `multi_tiletype_corner_set_iso45_matrix` 小节。
 

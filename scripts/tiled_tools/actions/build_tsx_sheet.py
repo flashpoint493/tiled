@@ -33,8 +33,9 @@
                 可选自动写入 Edge Set / Corner Set 的 <wangsets> 元数据，避免在透明
                 padding 很多的 isometric sheet 上手工逐 tile 标边。
 - wang_transform:
-                方向转换。`none` 适合 topdown sheet；`iso45_ccw` 适合经过
-                topdown_to_iso(angle=45) 的 sheet。
+                方向转换。`none` 适合 topdown sheet；`iso45_cw` / `iso45_ccw`
+                适合经过 topdown_to_iso(angle=45) 的 sheet，用于匹配 Tiled
+                isometric terrain overlay 的不同方向解释。
 - edge_wang_transform / corner_wang_transform / mixed_wang_transform:
                 可选按 wangset 类型覆盖方向转换。`corner_wang_transform=clockwise`
                 表示只将 Corner Set 的 Wang 规则绘制方向顺时针旋转 90°，不旋转 tile 图像。
@@ -74,17 +75,25 @@ def _transform_edge_code(code: int, transform: str) -> int:
         return code
     if transform in ("iso45", "iso45_ccw"):
         new_code = 0
-        if code & 2: new_code |= 1   # old E -> Top
-        if code & 4: new_code |= 2   # old S -> Right
-        if code & 8: new_code |= 4   # old W -> Bottom
-        if code & 1: new_code |= 8   # old N -> Left
+        if code & 2:
+            new_code |= 1   # old E -> Top
+        if code & 4:
+            new_code |= 2   # old S -> Right
+        if code & 8:
+            new_code |= 4   # old W -> Bottom
+        if code & 1:
+            new_code |= 8   # old N -> Left
         return new_code
     if transform == "opposite":
         new_code = 0
-        if code & 4: new_code |= 1
-        if code & 8: new_code |= 2
-        if code & 1: new_code |= 4
-        if code & 2: new_code |= 8
+        if code & 4:
+            new_code |= 1
+        if code & 8:
+            new_code |= 2
+        if code & 1:
+            new_code |= 4
+        if code & 2:
+            new_code |= 8
         return new_code
     raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
 
@@ -96,24 +105,36 @@ def _transform_corner_code(code: int, transform: str) -> int:
         return code
     if transform in ("iso45", "iso45_ccw"):
         new_code = 0
-        if code & 2: new_code |= 1   # old TR -> Tiled TL
-        if code & 4: new_code |= 2   # old BR -> Tiled TR
-        if code & 8: new_code |= 4   # old BL -> Tiled BR
-        if code & 1: new_code |= 8   # old TL -> Tiled BL
+        if code & 2:
+            new_code |= 1   # old TR -> Tiled TL
+        if code & 4:
+            new_code |= 2   # old BR -> Tiled TR
+        if code & 8:
+            new_code |= 4   # old BL -> Tiled BR
+        if code & 1:
+            new_code |= 8   # old TL -> Tiled BL
         return new_code
     if transform in ("clockwise", "cw90", "iso45_ccw_cw90", "iso45_ccw_then_cw90"):
         new_code = 0
-        if code & 1: new_code |= 2
-        if code & 2: new_code |= 4
-        if code & 4: new_code |= 8
-        if code & 8: new_code |= 1
+        if code & 1:
+            new_code |= 2
+        if code & 2:
+            new_code |= 4
+        if code & 4:
+            new_code |= 8
+        if code & 8:
+            new_code |= 1
         return new_code
     if transform == "opposite":
         new_code = 0
-        if code & 4: new_code |= 1
-        if code & 8: new_code |= 2
-        if code & 1: new_code |= 4
-        if code & 2: new_code |= 8
+        if code & 4:
+            new_code |= 1
+        if code & 8:
+            new_code |= 2
+        if code & 1:
+            new_code |= 4
+        if code & 2:
+            new_code |= 8
         return new_code
     raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
 
@@ -142,6 +163,8 @@ def _transform_edge_labels(labels: list[int], transform: str) -> list[int]:
         return list(labels)
     if transform in ("iso45", "iso45_ccw"):
         return [labels[1], labels[2], labels[3], labels[0]]
+    if transform in ("iso45_cw", "cw45"):
+        return [labels[3], labels[0], labels[1], labels[2]]
     if transform == "opposite":
         return [labels[2], labels[3], labels[0], labels[1]]
     raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
@@ -153,6 +176,8 @@ def _transform_corner_labels(labels: list[int], transform: str) -> list[int]:
         return list(labels)
     if transform in ("iso45", "iso45_ccw"):
         return [labels[1], labels[2], labels[3], labels[0]]
+    if transform in ("iso45_cw", "cw45"):
+        return [labels[3], labels[0], labels[1], labels[2]]
     if transform in ("clockwise", "cw90", "iso45_ccw_cw90", "iso45_ccw_then_cw90"):
         return [labels[3], labels[0], labels[1], labels[2]]
     if transform == "opposite":
@@ -166,6 +191,8 @@ def _transform_mixed_labels(labels: list[int], transform: str) -> list[int]:
         return list(labels)
     if transform in ("iso45", "iso45_ccw"):
         return [labels[2], labels[3], labels[4], labels[5], labels[6], labels[7], labels[0], labels[1]]
+    if transform in ("iso45_cw", "cw45"):
+        return [labels[6], labels[7], labels[0], labels[1], labels[2], labels[3], labels[4], labels[5]]
     if transform == "opposite":
         return [labels[4], labels[5], labels[6], labels[7], labels[0], labels[1], labels[2], labels[3]]
     raise ValueError(f"[build_tsx_sheet] 未知 wang_transform: {transform}")
@@ -203,10 +230,10 @@ class BuildTsxSheetAction(Action):
         "tileoffset_y": {"step": 1},
         "background_color": {"widget": "color"},
         "foreground_color": {"widget": "color"},
-        "wang_transform": {"enum": ["none", "iso45_ccw", "opposite"]},
-        "edge_wang_transform": {"enum": ["", "none", "iso45_ccw", "opposite"]},
-        "corner_wang_transform": {"enum": ["", "none", "iso45_ccw", "iso45_ccw_cw90", "clockwise", "opposite"]},
-        "mixed_wang_transform": {"enum": ["", "none", "iso45_ccw", "opposite"]},
+        "wang_transform": {"enum": ["none", "iso45_ccw", "iso45_cw", "opposite"]},
+        "edge_wang_transform": {"enum": ["", "none", "iso45_ccw", "iso45_cw", "opposite"]},
+        "corner_wang_transform": {"enum": ["", "none", "iso45_ccw", "iso45_cw", "iso45_ccw_cw90", "clockwise", "opposite"]},
+        "mixed_wang_transform": {"enum": ["", "none", "iso45_ccw", "iso45_cw", "opposite"]},
     }
 
 

@@ -1,0 +1,34 @@
+name: project_tkgo_beauti_tmj_iso45
+project_only: true
+description: |
+  TKGO 项目专属步骤 3：把已绘制的 topdown TMJ 转成使用美术版 tileset 的 iso45 TMJ。
+
+  默认输入：
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90.tmj
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.tsx
+
+  默认输出：
+    - D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90_iso45_beauti.tmj
+
+  约定：
+    - 不重刷 terrain，不重排 layer data。
+    - 使用 gid_remap=iso45_cw，把 topdown Wang 方向映射到 iso45 clockwise 版本。
+    - 默认通过 tile name 做严格同构校验。
+
+steps:
+  - action: convert_tmj_topdown_to_iso45
+    params:
+      map_path: ${map_path:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90.tmj}
+      target_tileset: ${target_tileset:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\Tileset_origin_04\TileSheet\scene_source_iso45_beauti.tsx}
+      output: ${output:D:\UEAS\Game\TKGO\Content\Developers\ocarmihe\Collections\Tile\tm_07_90_iso45_beauti.tmj}
+      source_tileset: ${source_tileset:auto}
+      orientation: isometric
+      renderorder: ${renderorder:right-down}
+      map_tile_width: ${map_tile_width:}
+      map_tile_height: ${map_tile_height:}
+      tiledversion: ${tiledversion:}
+      check_tile_names: ${check_tile_names:true}
+      strict_tile_names: ${strict_tile_names:true}
+      gid_remap: ${gid_remap:iso45_cw}
+      gid_remap_wangset: ${gid_remap_wangset:mixed_set}
+      indent: ${indent:1}

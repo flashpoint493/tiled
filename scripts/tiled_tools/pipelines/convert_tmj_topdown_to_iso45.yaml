@@ -1,0 +1,30 @@
+name: convert_tmj_topdown_to_iso45
+description: |
+  将已经绘制好的 topdown Tiled JSON 地图转换成 iso45 地图。
+
+  这个流程只更新 map metadata 和 tileset 引用：
+    - orientation -> isometric
+    - renderorder -> right-down
+    - tilewidth / tileheight -> 目标 iso45 grid 尺寸
+    - tilesets[source] -> 目标 iso45 .tsx
+
+  它不会重刷 terrain，也不会重排 layer data；前提是 topdown / iso45 tileset
+  保持相同 local tile ID 顺序。默认会通过 tile name 做同构校验。
+
+steps:
+  - action: convert_tmj_topdown_to_iso45
+    params:
+      map_path: ${map_path}
+      target_tileset: ${target_tileset}
+      output: ${output:auto}
+      source_tileset: ${source_tileset:auto}
+      orientation: isometric
+      renderorder: ${renderorder:right-down}
+      map_tile_width: ${map_tile_width:}
+      map_tile_height: ${map_tile_height:}
+      tiledversion: ${tiledversion:}
+      check_tile_names: ${check_tile_names:true}
+      strict_tile_names: ${strict_tile_names:true}
+      gid_remap: ${gid_remap:none}
+      gid_remap_wangset: ${gid_remap_wangset:mixed_set}
+      indent: ${indent:1}
